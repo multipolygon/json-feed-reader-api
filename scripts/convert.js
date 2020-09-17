@@ -70,9 +70,7 @@ function loadXml(feedPath) {
                                         size_in_bytes: parseInt(e.length, 10) || null,
                                     }),
                                 )
-                                .filter(
-                                    (att) => _.isString(att.url) && _.isString(att.mime_type)
-                                ),
+                                .filter((att) => _.isString(att.url) && _.isString(att.mime_type)),
                         }),
                     );
                 }
@@ -87,7 +85,6 @@ function jsonParse(buf) {
     try {
         return JSON.parse(buf);
     } catch (e) {
-        console.error('Error loading JSON');
         return null;
     }
 }
@@ -130,12 +127,17 @@ async function convert(dirPath) {
     const config = yaml.safeLoad(fs.readFileSync(path.join(contentPath, dirPath, 'config.yaml')));
     const feedPath = path.join(contentPath, dirPath, 'original.txt');
     const typePath = path.join(contentPath, dirPath, 'type.txt');
-    if (fs.existsSync(feedPath) && fs.existsSync(typePath)) {
+    if (
+        config.enabled !== false &&
+        config.disabled !== true &&
+        fs.existsSync(feedPath) &&
+        fs.existsSync(typePath)
+    ) {
         const type = fs.readFileSync(typePath).toString();
         // console.log(' ->', type);
         const feed =
-            (/xml/.test(type) && (await loadXml(feedPath))) ||
-            (/json/.test(type) && loadJson(feedPath)) ||
+            ((config.type === 'xml' || /xml/.test(type)) && (await loadXml(feedPath))) ||
+            ((config.type === 'json' || /json/.test(type)) && loadJson(feedPath)) ||
             null;
         // console.log(feed);
         if (feed && feed.items) {
@@ -148,26 +150,15 @@ async function convert(dirPath) {
                 });
             } catch (e) {
                 console.log(dirPath);
-                console.error(e);
-                // console.log('----------------------');
-                // console.log(JSON.stringify(feed, null, 4));
-                // console.log('----------------------');
-                // break;
-                console.log('---');
             }
         } else {
-            console.log(dirPath);
-            console.log(' -> EMPTY!', type);
-            console.log('---');
+            console.log('EMPTY', dirPath, type);
         }
-    } else {
-        // console.error('File "original.txt" not found!');
     }
     return 'ok';
 }
 
 async function all() {
-    console.log('---');
     for (const configPath of glob
         .sync(path.join('*', '*', '*', 'config.yaml'), { cwd: contentPath })
         .slice(0, 1000000)) {
