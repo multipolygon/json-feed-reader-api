@@ -1,4 +1,4 @@
-# NatureShare API
+# API
 
 ## Install
 
