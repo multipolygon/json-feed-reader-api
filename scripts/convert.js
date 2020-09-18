@@ -22,7 +22,14 @@ const contentPath = process.env.CONTENT_PATH;
 
 function loadXml(feedPath) {
     return new Promise((resolve) => {
-        const feed = { items: [] };
+        const feed = {
+            version: null,
+            feed_url: null,
+            title: null,
+            description: null,
+            home_page_url: null,
+            items: [],
+        };
         fs.createReadStream(feedPath)
             .on('error', (error) => {
                 console.error(error);
@@ -36,7 +43,8 @@ function loadXml(feedPath) {
             .on('meta', (meta) => {
                 feed.title = meta.title || 'No Title';
                 feed.description = _stripTags(meta.description || '').trim() || null;
-                // feed.home_page_url = meta.xmlurl || meta.link;
+                feed.home_page_url = meta.link;
+                // feed.feed_url = meta.xmlurl;
                 // if (meta.image && meta.image.url)
                 //     feed.icon = meta.image.url;
                 // if (meta.favicon)
@@ -50,14 +58,13 @@ function loadXml(feedPath) {
                     const item = stream.read();
                     if (item) eol = false;
                     else break;
-                    // console.log('  -->', item.title);
+                    // console.log('  -->', item.link);
                     feed.items.push(
                         omitNull({
                             id: item.guid,
                             title: item.title,
                             content_text: (item.description && _stripTags(item.description)) || '-',
-                            url: item.origlink || item.url,
-                            external_url: item.origlink || item.url,
+                            url: item.link,
                             image: item.image.url,
                             date_published: moment(item.pubdate).toISOString(),
                             date_modified: moment(item.date).toISOString(),

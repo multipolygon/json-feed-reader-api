@@ -57,9 +57,9 @@ export default function ({ dirPath, name, feed }) {
 
         const feedPage = {
             version: 'https://jsonfeed.org/version/1',
-            ...feed,
             feed_url: feedUrl,
-            home_page_url: homePageUrl,
+            ...feed,
+            home_page_url: feed.home_page_url || homePageUrl,
             ...(page < pageCount
                 ? {
                       next_url: new URL(

@@ -1,4 +1,4 @@
-/* global process */
+/* global process URL URLSearchParams */
 
 import fs from 'fs';
 import yaml from 'js-yaml';
@@ -11,6 +11,8 @@ import omitNull from './utils/omitNull.js';
 
 dotenv.config();
 
+const appHost = process.env.APP_HOST;
+const contentHost = process.env.CONTENT_HOST;
 const contentPath = process.env.CONTENT_PATH;
 
 const getFirst = (ary, prop) => {
@@ -42,6 +44,8 @@ function makeIndexFeeds({ inFilePaths, title, description, name, dirPath }) {
             console.log(' ->', indexPath);
             const bucketFeed = JSON.parse(fs.readFileSync(indexPath));
             if (bucketFeed.items.length !== 0) {
+                const url = new URL(appHost);
+                url.search = new URLSearchParams({ i: bucketFeed.feed_url.replace(contentHost, './') });
                 return {
                     title: _.upperFirst(title || bucketFeed.title),
                     description: _.upperFirst(description || bucketFeed.description),
@@ -49,7 +53,7 @@ function makeIndexFeeds({ inFilePaths, title, description, name, dirPath }) {
                         ...acc.items,
                         omitNull({
                             id: bucketFeed.feed_url,
-                            url: bucketFeed.home_page_url,
+                            url: url.href,
                             title: bucketFeed.title,
                             content_text: `${bucketFeed.items.length} items`,
                             image: getFirst(bucketFeed.items, 'image'),
@@ -76,7 +80,7 @@ function makeIndexFeeds({ inFilePaths, title, description, name, dirPath }) {
 
     writeFiles({
         dirPath,
-        name,
+        name: `${name}_index`,
         feed,
     });
 
@@ -92,7 +96,18 @@ function makeCombinedFeeds({ inFilePaths, title, description, name, dirPath }) {
                 return {
                     title: _.upperFirst(title || bucketFeed.title),
                     description: _.upperFirst(description || bucketFeed.description),
-                    items: [...acc.items, ...bucketFeed.items],
+                    items: [
+                        ...acc.items,
+                        ...bucketFeed.items.map(i => (
+                            {
+                                ...i,
+                                _meta: {
+                                    ...(i._meta || {}),
+                                    subtitle: i._meta && i._meta.subtitle || bucketFeed.title,
+                                }
+                            }
+                        )),
+                    ],
                 };
             }
             return acc;
@@ -106,30 +121,14 @@ function makeCombinedFeeds({ inFilePaths, title, description, name, dirPath }) {
 
     writeFiles({
         dirPath,
-        name: `${name}_all`,
+        name,
         feed,
     });
 
     return feed;
 }
 
-function feedIndexes() {
-    for (const configPath of glob.sync(path.join('*', '*', '*', 'config.yaml'), {
-        cwd: contentPath,
-    })) {
-        const dirPath = path.dirname(configPath);
-        console.log(dirPath);
-        const config = yaml.safeLoad(fs.readFileSync(path.join(contentPath, configPath)));
-        makeIndexFeeds({
-            inFilePaths: ['inbox', 'favourites', 'archive', 'original']
-                .map((bucket) => path.join(contentPath, dirPath, `${bucket}.json`))
-                .filter((bucketPath) => fs.existsSync(bucketPath)),
-            title: config.title,
-            name: 'index',
-            dirPath,
-        });
-    }
-}
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function subCategoryIndexes(bucket) {
     for (const dirPath of glob.sync(path.join('*', '*'), { cwd: contentPath })) {
@@ -164,14 +163,14 @@ function categoryIndexes(bucket) {
         if (fs.lstatSync(path.join(contentPath, dirPath)).isDirectory()) {
             console.log(dirPath);
             makeIndexFeeds({
-                inFilePaths: glob.sync(path.join(contentPath, dirPath, '*', `${bucket}.json`)),
+                inFilePaths: glob.sync(path.join(contentPath, dirPath, '*', `${bucket}_index.json`)),
                 title: dirPath,
                 description: 'All subcategories in category.',
                 name: bucket,
                 dirPath,
             });
             makeCombinedFeeds({
-                inFilePaths: glob.sync(path.join(contentPath, dirPath, '*', `${bucket}_all.json`)),
+                inFilePaths: glob.sync(path.join(contentPath, dirPath, '*', `${bucket}.json`)),
                 title: dirPath,
                 description: 'All items in subcategories for category.',
                 name: bucket,
@@ -185,14 +184,14 @@ function mainIndexes(bucket) {
     console.log(contentPath);
     console.log(bucket);
     makeIndexFeeds({
-        inFilePaths: glob.sync(path.join(contentPath, '*', `${bucket}.json`)),
+        inFilePaths: glob.sync(path.join(contentPath, '*', `${bucket}_index.json`)),
         title: 'Multipolygon Feeds Index',
         description: 'All categories.',
         name: bucket,
         dirPath: '.',
     });
     makeCombinedFeeds({
-        inFilePaths: glob.sync(path.join(contentPath, '*', `${bucket}_all.json`)),
+        inFilePaths: glob.sync(path.join(contentPath, '*', `${bucket}.json`)),
         title: 'Multipolygon Feeds All Items',
         description: 'All items.',
         name: bucket,
@@ -200,9 +199,7 @@ function mainIndexes(bucket) {
     });
 }
 
-feedIndexes();
-
-['index', 'inbox', 'favourites', 'archive'].forEach((bucket) => {
+['queue', 'favourites', 'archive', 'original'].forEach((bucket) => {
     console.log('----', bucket, '----');
     subCategoryIndexes(bucket);
     categoryIndexes(bucket);
