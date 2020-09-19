@@ -57,7 +57,7 @@ function makeIndexFeeds({ inFilePaths, title, description, name, dirPath }) {
                             url: url.href,
                             title: bucketFeed.title,
                             content_text: `${bucketFeed.items.length} items`,
-                            image: getFirst(bucketFeed.items, 'image'),
+                            image: getFirst(bucketFeed.items, 'image') || bucketFeed.icon,
                             date_published: getFirst(bucketFeed.items, 'date_published'),
                             date_modified: getFirst(bucketFeed.items, 'date_published'),
                             _geo: omitNull({
@@ -102,6 +102,8 @@ function makeCombinedFeeds({ inFilePaths, title, description, name, dirPath }) {
                         ...acc.items,
                         ...bucketFeed.items.map((i) => ({
                             ...i,
+                            id: [...tags, i.id].join('~'),
+                            image: i.image || bucketFeed.icon,
                             tags: _.uniq([
                                 ...(i.tags || []),
                                 ...tags,

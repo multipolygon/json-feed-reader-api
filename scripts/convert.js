@@ -69,11 +69,12 @@ function loadXml(feedPath, config) {
                 feed.description = _stripTags(meta.description || '').trim() || null;
                 feed.home_page_url = meta.link;
                 feed._original = { url: meta.xmlurl };
-                // feed.feed_url = meta.xmlurl;
-                // if (meta.image && meta.image.url)
-                //     feed.icon = meta.image.url;
-                // if (meta.favicon)
-                //     feed.favicon = meta.favicon;
+                if (meta.image && meta.image.url)
+                    try {
+                        feed.icon = new URL(meta.image.url, meta.xmlurl).href;
+                    } catch (e) {
+                        // pass
+                    }
                 if (meta.copyright) feed.user_comment = meta.copyright;
             })
             .on('readable', function readable() {
@@ -108,7 +109,7 @@ function loadXml(feedPath, config) {
                                  _stripTags(item['media:group']['media:description']['#'])) ||
                                 '-',
                             url: item.link,
-                            image: item.image.url || images[0],
+                            image: item.image.url || images[0] || feed.icon,
                             date_published: moment(item.pubdate).toISOString(),
                             date_modified: moment(item.date).toISOString(),
                             tags: item.categories,
