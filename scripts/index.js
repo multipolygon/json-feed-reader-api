@@ -93,6 +93,7 @@ function makeCombinedFeeds({ inFilePaths, title, description, name, dirPath }) {
         (acc, indexPath) => {
             console.log(' ->', indexPath);
             const bucketFeed = JSON.parse(fs.readFileSync(indexPath));
+            const tags = path.dirname(path.relative(contentPath, indexPath)).split('/');
             if (bucketFeed.items.length !== 0) {
                 return {
                     title: _.upperFirst(title || bucketFeed.title),
@@ -101,6 +102,11 @@ function makeCombinedFeeds({ inFilePaths, title, description, name, dirPath }) {
                         ...acc.items,
                         ...bucketFeed.items.map((i) => ({
                             ...i,
+                            tags: _.uniq([
+                                ...(i.tags || []),
+                                ...tags,
+                                tags.join('~'),
+                            ]),
                             _meta: {
                                 ...(i._meta || {}),
                                 subtitle: (i._meta && i._meta.subtitle) || bucketFeed.title,
