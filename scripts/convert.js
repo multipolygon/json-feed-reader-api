@@ -63,7 +63,12 @@ function loadXml(feedPath) {
                         omitNull({
                             id: item.guid,
                             title: item.title,
-                            content_text: (item.description && _stripTags(item.description)) || '-',
+                            content_text:
+                                (item.description && _stripTags(item.description)) ||
+                                (item['media:group'] &&
+                                    item['media:group']['media:description'] &&
+                                    _stripTags(item['media:group']['media:description']['#'])) ||
+                                '-',
                             url: item.link,
                             image: item.image.url,
                             date_published: moment(item.pubdate).toISOString(),
@@ -78,6 +83,13 @@ function loadXml(feedPath) {
                                     }),
                                 )
                                 .filter((att) => _.isString(att.url) && _.isString(att.mime_type)),
+                            _youtube: item['yt:videoid']
+                                ? {
+                                      id: item['yt:videoid']['#'],
+                                      width: item['media:group']['media:content']['@'].width,
+                                      height: item['media:group']['media:content']['@'].height,
+                                  }
+                                : null,
                         }),
                     );
                 }
