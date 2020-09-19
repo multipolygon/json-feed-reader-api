@@ -4,3 +4,5 @@ node_modules
 heroku*
 playground
 public/feeds
+aws_sync*
+*.zip

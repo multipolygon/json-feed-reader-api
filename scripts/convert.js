@@ -11,8 +11,8 @@ import FeedParser from 'feedparser';
 import dotenv from 'dotenv';
 import moment from 'moment';
 import { hideBin } from 'yargs/helpers';
-import omitNull from './utils/omitNull.js';
-import writeFiles from './utils/writeFiles.js';
+import omitNull from '../utils/omitNull.js';
+import writeFiles from '../utils/writeFiles.js';
 
 dotenv.config();
 
@@ -31,10 +31,9 @@ function htmlImages(html) {
         while (true) {
             const m = re.exec(html);
             // console.log(m);
-            if (!m)
-                break;
+            if (!m) break;
             try {
-                src.push( new URL(m[1]).href );
+                src.push(new URL(m[1]).href);
             } catch (e) {
                 console.log(' -> Invalid URL:', m[1]);
             }
@@ -68,10 +67,12 @@ function loadXml(feedPath, config) {
                 feed.title = meta.title || 'No Title';
                 feed.description = _stripTags(meta.description || '').trim() || null;
                 feed.home_page_url = meta.link;
-                feed._original = { url: meta.xmlurl };
+                feed._feed_url = {
+                    src: config.src,
+                };
                 if (meta.image && meta.image.url)
                     try {
-                        feed.icon = new URL(meta.image.url, meta.xmlurl).href;
+                        feed.icon = new URL(meta.image.url, config.src).href;
                     } catch (e) {
                         // pass
                     }
@@ -89,24 +90,24 @@ function loadXml(feedPath, config) {
                     const attachments = [
                         ...item.enclosures
                             .map((e) =>
-                                 omitNull({
-                                     url: (e.url || '').replace(/\s/g, '%20'),
-                                     mime_type: e.type,
-                                     size_in_bytes: parseInt(e.length, 10) || null,
-                                 }),
-                                )
+                                omitNull({
+                                    url: (e.url || '').replace(/\s/g, '%20'),
+                                    mime_type: e.type,
+                                    size_in_bytes: parseInt(e.length, 10) || null,
+                                }),
+                            )
                             .filter((att) => _.isString(att.url) && _.isString(att.mime_type)),
-                        ...images.map(i => ({ url: i, mime_type: 'image/something' })),
+                        ...images.map((i) => ({ url: i, mime_type: 'image/something' })),
                     ];
                     feed.items.push(
                         omitNull({
                             id: item.guid,
                             title: item.title,
                             content_text:
-                            (item.description && _stripTags(item.description)) ||
+                                (item.description && _stripTags(item.description)) ||
                                 (item['media:group'] &&
-                                 item['media:group']['media:description'] &&
-                                 _stripTags(item['media:group']['media:description']['#'])) ||
+                                    item['media:group']['media:description'] &&
+                                    _stripTags(item['media:group']['media:description']['#'])) ||
                                 '-',
                             url: item.link,
                             image: item.image.url || images[0] || feed.icon,
@@ -115,17 +116,20 @@ function loadXml(feedPath, config) {
                             tags: item.categories,
                             attachments,
                             _meta: {
-                                audioCount: attachments.filter(i => /^audio\//.test(i.mime_type)).length,
-                                videoCount: attachments.filter(i => /^video\//.test(i.mime_type)).length,
-                                imageCount: attachments.filter(i => /^image\//.test(i.mime_type)).length,
+                                audioCount: attachments.filter((i) => /^audio\//.test(i.mime_type))
+                                    .length,
+                                videoCount: attachments.filter((i) => /^video\//.test(i.mime_type))
+                                    .length,
+                                imageCount: attachments.filter((i) => /^image\//.test(i.mime_type))
+                                    .length,
                             },
                             _youtube: item['yt:videoid']
                                 ? {
-                                    id: item['yt:videoid']['#'],
-                                    width: item['media:group']['media:content']['@'].width,
-                                    height: item['media:group']['media:content']['@'].height,
-                                }
-                            : null,
+                                      id: item['yt:videoid']['#'],
+                                      width: item['media:group']['media:content']['@'].width,
+                                      height: item['media:group']['media:content']['@'].height,
+                                  }
+                                : null,
                         }),
                     );
                 }
@@ -150,28 +154,28 @@ function loadJson(feedPath) {
         return omitNull({
             ..._.pick(orig, ['version', 'home_page_url', 'feed_url']),
             items: (orig.items || []).map((i) =>
-                                          _.pick(
-                                              {
-                                                  ...i,
-                                                  content_text: _stripTags(i.content_text || i.content_html),
-                                                  attachments: (i.attachments || []).filter(
-                                                      (att) => att.mime_type && /(audio|video)/.test(att.mime_type),
-                                                  ),
-                                              },
-                                              [
-                                                  'id',
-                                                  'title',
-                                                  'content_text',
-                                                  'url',
-                                                  'external_url',
-                                                  'image',
-                                                  'date_published',
-                                                  'date_modified',
-                                                  'tags',
-                                                  'attachments',
-                                              ],
-                                          ),
-                                         ),
+                _.pick(
+                    {
+                        ...i,
+                        content_text: _stripTags(i.content_text || i.content_html),
+                        attachments: (i.attachments || []).filter(
+                            (att) => att.mime_type && /(audio|video)/.test(att.mime_type),
+                        ),
+                    },
+                    [
+                        'id',
+                        'title',
+                        'content_text',
+                        'url',
+                        'external_url',
+                        'image',
+                        'date_published',
+                        'date_modified',
+                        'tags',
+                        'attachments',
+                    ],
+                ),
+            ),
         });
     }
     return orig;
@@ -184,16 +188,16 @@ async function convert(dirPath) {
     const typePath = path.join(contentPath, dirPath, 'type.txt');
     if (
         config.enabled !== false &&
-            config.disabled !== true &&
-            fs.existsSync(feedPath) &&
-            fs.existsSync(typePath)
+        config.disabled !== true &&
+        fs.existsSync(feedPath) &&
+        fs.existsSync(typePath)
     ) {
         const type = fs.readFileSync(typePath).toString();
         // console.log(' ->', type);
         const feed =
-              ((config.type === 'xml' || /xml/.test(type)) && (await loadXml(feedPath, config))) ||
-              ((config.type === 'json' || /json/.test(type)) && loadJson(feedPath)) ||
-              null;
+            ((config.type === 'xml' || /xml/.test(type)) && (await loadXml(feedPath, config))) ||
+            ((config.type === 'json' || /json/.test(type)) && loadJson(feedPath)) ||
+            null;
         // console.log(feed);
         if (feed && feed.items) {
             if (config.title) feed.title = config.title;
@@ -215,8 +219,8 @@ async function convert(dirPath) {
 
 async function all() {
     for (const configPath of glob
-               .sync(path.join('*', '*', '*', 'config.yaml'), { cwd: contentPath })
-               .slice(0, 1000000)) {
+        .sync(path.join('*', '*', '*', 'config.yaml'), { cwd: contentPath })
+        .slice(0, 1000000)) {
         await convert(path.dirname(configPath));
     }
     return 'ok';

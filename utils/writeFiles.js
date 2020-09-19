@@ -52,21 +52,26 @@ export default function ({ dirPath, name, feed }) {
     const pageCount = Math.ceil(feed.items.length / PER_PAGE);
     const items = sortFeedItems(feed.items);
 
-    _.range(1, pageCount + 1).forEach((page) => {
+    _.range(1, (pageCount || 1) + 1).forEach((page) => {
         const fileName = `${name}${page === 1 ? '' : `_${page}`}`;
 
         const feedPage = {
             version: 'https://jsonfeed.org/version/1',
             feed_url: feedUrl,
+            _feed_url: {
+                ...(feed._feed_url || {}),
+                rss: feedUrl.replace(/\.json\b/, '.rss.xml'),
+                atom: feedUrl.replace(/\.json\b/, '.atom.xml'),
+            },
             ...feed,
             home_page_url: feed.home_page_url || homePageUrl,
             ...(page < pageCount
                 ? {
-                      next_url: new URL(
-                          ['.', dirPath, `${name}_${page + 1}.json`].join('/'),
-                          contentHost,
-                      ).href,
-                  }
+                    next_url: new URL(
+                        ['.', dirPath, `${name}_${page + 1}.json`].join('/'),
+                        contentHost,
+                    ).href,
+                }
                 : {}),
             items: items.slice((page - 1) * PER_PAGE, page * PER_PAGE),
             _meta: {
@@ -88,14 +93,14 @@ export default function ({ dirPath, name, feed }) {
         fs.writeFileSync(
             path.join(contentPath, dirPath, `${fileName}.rss.xml`),
             jsonfeedToRSS(feedPage, {
-                feedURLFn: (feedURL) => feedURL.replace(/\.json\b/, '.rss.xml'),
+                feedURLFn: (url) => url.replace(/\.json\b/, '.rss.xml'),
             }),
         );
 
         fs.writeFileSync(
             path.join(contentPath, dirPath, `${fileName}.atom.xml`),
             jsonfeedToAtom(feedPage, {
-                feedURLFn: (feedURL) => feedURL.replace(/\.json\b/, '.atom.xml'),
+                feedURLFn: (url) => url.replace(/\.json\b/, '.atom.xml'),
             }),
         );
     });

@@ -7,6 +7,7 @@ import cors from 'cors';
 import useragent from 'express-useragent';
 
 import auth from './app/auth.js';
+import actions from './app/actions.js';
 
 if (process.env.NODE_ENV !== 'production') {
     dotenv.config();
@@ -51,5 +52,6 @@ app.get('/', (request, response) => {
 });
 
 auth({ app });
+actions({ app });
 
 app.listen(process.env.PORT);

@@ -5,8 +5,8 @@ import path from 'path';
 import _ from 'lodash';
 import glob from 'glob';
 import dotenv from 'dotenv';
-import writeFiles from './utils/writeFiles.js';
-import omitNull from './utils/omitNull.js';
+import writeFiles from '../utils/writeFiles.js';
+import omitNull from '../utils/omitNull.js';
 
 dotenv.config();
 
@@ -104,11 +104,7 @@ function makeCombinedFeeds({ inFilePaths, title, description, name, dirPath }) {
                             ...i,
                             id: [...tags, i.id].join('~'),
                             image: i.image || bucketFeed.icon,
-                            tags: _.uniq([
-                                ...(i.tags || []),
-                                ...tags,
-                                tags.join('~'),
-                            ]),
+                            tags: _.uniq([...(i.tags || []), ...tags, tags.join('~')]),
                             _meta: {
                                 ...(i._meta || {}),
                                 subtitle: (i._meta && i._meta.subtitle) || bucketFeed.title,
