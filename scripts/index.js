@@ -97,6 +97,9 @@ function makeCombinedFeeds({ inFilePaths, title, description, name, dirPath }) {
                     ...bucketFeed.items.map((i) => ({
                         ...i,
                         id: [...tags, i.id].join('~'),
+                        _id: {
+                            parent: i.id,
+                        },
                         _feed_url: {
                             parent: (i._feed_url && i._feed_url.parent) || bucketFeed.feed_url,
                         },

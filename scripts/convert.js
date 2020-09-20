@@ -99,6 +99,9 @@ function loadXml(feedPath, config) {
                             .filter((att) => _.isString(att.url) && _.isString(att.mime_type)),
                         ...images.map((i) => ({ url: i, mime_type: 'image/something' })),
                     ];
+                    const attachmentImage = attachments.filter((a) =>
+                        /^image\//.test(a.mime_type),
+                    )[0];
                     feed.items.push(
                         omitNull({
                             id: item.guid,
@@ -110,7 +113,11 @@ function loadXml(feedPath, config) {
                                     _stripTags(item['media:group']['media:description']['#'])) ||
                                 '-',
                             url: item.link,
-                            image: item.image.url || images[0] || feed.icon,
+                            image:
+                                item.image.url ||
+                                (attachmentImage && attachmentImage.url) ||
+                                images[0] ||
+                                feed.icon,
                             date_published: moment(item.pubdate).toISOString(),
                             date_modified: moment(item.date).toISOString(),
                             tags: item.categories,

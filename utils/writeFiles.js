@@ -17,7 +17,7 @@ const appHost = process.env.APP_HOST;
 const contentHost = process.env.CONTENT_HOST;
 
 const validator = new jsonschema.Validator();
-const geoSchema = JSON.parse(fs.readFileSync('./scripts/schemas/geo.json'));
+const geoSchema = JSON.parse(fs.readFileSync('./utils/schemas/geo.json'));
 
 const validate = (obj, schema) => {
     const result = validator.validate(obj, schema, { throwError: false });
