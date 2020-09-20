@@ -38,8 +38,10 @@ const averageCoord = (items) => {
 };
 
 function makeIndexFeeds({ inFilePaths, title, description, name, dirPath }) {
-    const feed = inFilePaths.reduce(
-        (acc, indexPath) => {
+    const feed = {
+        title: _.upperFirst(title),
+        description,
+        items: inFilePaths.reduce((acc, indexPath) => {
             console.log(' ->', indexPath);
             const bucketFeed = JSON.parse(fs.readFileSync(indexPath));
             if (bucketFeed.items.length !== 0) {
@@ -47,35 +49,28 @@ function makeIndexFeeds({ inFilePaths, title, description, name, dirPath }) {
                 url.search = new URLSearchParams({
                     i: bucketFeed.feed_url.replace(contentHost, './'),
                 });
-                return {
-                    title: _.upperFirst(title || bucketFeed.title),
-                    description: _.upperFirst(description || bucketFeed.description),
-                    items: [
-                        ...acc.items,
-                        omitNull({
-                            id: bucketFeed.feed_url,
-                            url: url.href,
-                            title: bucketFeed.title,
-                            content_text: `${bucketFeed.items.length} items`,
-                            image: getFirst(bucketFeed.items, 'image') || bucketFeed.icon,
-                            date_published: getFirst(bucketFeed.items, 'date_published'),
-                            date_modified: getFirst(bucketFeed.items, 'date_published'),
-                            _geo: omitNull({
-                                coordinates: averageCoord(bucketFeed.items),
-                            }),
-                            _meta: {
-                                itemCount: bucketFeed.items.length,
-                            },
+                return [
+                    ...acc,
+                    omitNull({
+                        id: bucketFeed.feed_url,
+                        url: url.href,
+                        title: bucketFeed.title,
+                        content_text: `${bucketFeed.items.length} items`,
+                        image: getFirst(bucketFeed.items, 'image') || bucketFeed.icon,
+                        date_published: getFirst(bucketFeed.items, 'date_published'),
+                        date_modified: getFirst(bucketFeed.items, 'date_published'),
+                        _geo: omitNull({
+                            coordinates: averageCoord(bucketFeed.items),
                         }),
-                    ],
-                };
+                        _meta: {
+                            itemCount: bucketFeed.items.length,
+                        },
+                    }),
+                ];
             }
             return acc;
-        },
-        {
-            items: [],
-        },
-    );
+        }, []),
+    };
 
     console.log('   ---->', feed.items.length);
 
@@ -89,36 +84,34 @@ function makeIndexFeeds({ inFilePaths, title, description, name, dirPath }) {
 }
 
 function makeCombinedFeeds({ inFilePaths, title, description, name, dirPath }) {
-    const feed = inFilePaths.reduce(
-        (acc, indexPath) => {
+    const feed = {
+        title: _.upperFirst(title),
+        description,
+        items: inFilePaths.reduce((acc, indexPath) => {
             console.log(' ->', indexPath);
             const bucketFeed = JSON.parse(fs.readFileSync(indexPath));
             const tags = path.dirname(path.relative(contentPath, indexPath)).split('/');
             if (bucketFeed.items.length !== 0) {
-                return {
-                    title: _.upperFirst(title || bucketFeed.title),
-                    description: _.upperFirst(description || bucketFeed.description),
-                    items: [
-                        ...acc.items,
-                        ...bucketFeed.items.map((i) => ({
-                            ...i,
-                            id: [...tags, i.id].join('~'),
-                            image: i.image || bucketFeed.icon,
-                            tags: _.uniq([...(i.tags || []), ...tags, tags.join('~')]),
-                            _meta: {
-                                ...(i._meta || {}),
-                                subtitle: (i._meta && i._meta.subtitle) || bucketFeed.title,
-                            },
-                        })),
-                    ],
-                };
+                return [
+                    ...acc,
+                    ...bucketFeed.items.map((i) => ({
+                        ...i,
+                        id: [...tags, i.id].join('~'),
+                        _feed_url: {
+                            parent: (i._feed_url && i._feed_url.parent) || bucketFeed.feed_url,
+                        },
+                        image: i.image || bucketFeed.icon,
+                        tags: _.uniq([...(i.tags || []), ...tags, tags.join('~')]),
+                        _meta: {
+                            ...(i._meta || {}),
+                            subtitle: (i._meta && i._meta.subtitle) || bucketFeed.title,
+                        },
+                    })),
+                ];
             }
             return acc;
-        },
-        {
-            items: [],
-        },
-    );
+        }, []),
+    };
 
     console.log('   ---->', feed.items.length);
 
