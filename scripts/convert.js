@@ -11,16 +11,24 @@ import FeedParser from 'feedparser';
 import dotenv from 'dotenv';
 import moment from 'moment';
 import { hideBin } from 'yargs/helpers';
+import Mimer from 'mimer';
+import textVersion from 'textversionjs';
 import omitNull from '../utils/omitNull.js';
 import writeFiles from '../utils/writeFiles.js';
 
 dotenv.config();
 
+const mime = Mimer();
+
 const { argv } = yargs(hideBin(process.argv));
 
 const contentPath = process.env.CONTENT_PATH;
 
-function htmlImages(html) {
+const textVersionConfig = {
+    headingStyle: 'hashify',
+};
+
+function getHtmlImages(html, rootUrl) {
     // https://stackoverflow.com/a/15013465/5165
 
     const src = [];
@@ -33,7 +41,7 @@ function htmlImages(html) {
             // console.log(m);
             if (!m) break;
             try {
-                src.push(new URL(m[1]).href);
+                src.push(new URL(m[1], rootUrl).href);
             } catch (e) {
                 console.log(' -> Invalid URL:', m[1]);
             }
@@ -63,21 +71,6 @@ function loadXml(feedPath, config) {
                 console.error(error);
                 resolve(null);
             })
-            .on('meta', (meta) => {
-                feed.title = meta.title || 'No Title';
-                feed.description = _stripTags(meta.description || '').trim() || null;
-                feed.home_page_url = meta.link;
-                feed._feed_url = {
-                    src: config.src,
-                };
-                if (meta.image && meta.image.url)
-                    try {
-                        feed.icon = new URL(meta.image.url, config.src).href;
-                    } catch (e) {
-                        // pass
-                    }
-                if (meta.copyright) feed.user_comment = meta.copyright;
-            })
             .on('readable', function readable() {
                 const stream = this;
                 let eol = true;
@@ -85,41 +78,62 @@ function loadXml(feedPath, config) {
                     const item = stream.read();
                     if (item) eol = false;
                     else break;
-                    // console.log('  -->', item.link);
-                    const images = config.html_images ? htmlImages(item.description) : [];
-                    const attachments = [
-                        ...item.enclosures
-                            .map((e) =>
-                                omitNull({
-                                    url: (e.url || '').replace(/\s/g, '%20'),
-                                    mime_type: e.type,
-                                    size_in_bytes: parseInt(e.length, 10) || null,
-                                }),
-                            )
-                            .filter((att) => _.isString(att.url) && _.isString(att.mime_type)),
-                        ...images.map((i) => ({ url: i, mime_type: 'image/something' })),
-                    ];
+
+                    feed.title = item.meta.title || 'No Title';
+                    feed.description = _stripTags(item.meta.description || '').trim() || null;
+                    feed.home_page_url = item.meta.link;
+                    feed._feed_url = {
+                        src: config.src,
+                    };
+                    if (item.meta.image && item.meta.image.url)
+                        try {
+                            feed.icon = new URL(item.meta.image.url, config.src).href;
+                        } catch (e) {
+                            // pass
+                        }
+                    if (item.meta.copyright) feed.user_comment = item.meta.copyright;
+
+                    const attachments = item.enclosures
+                        .map((e) =>
+                            omitNull({
+                                url: (e.url || '').replace(/\s/g, '%20'),
+                                mime_type: e.type || mime.get(new URL(e.url).pathname),
+                                size_in_bytes: parseInt(e.length, 10) || null,
+                            }),
+                        )
+                        .filter((att) => _.isString(att.url) && _.isString(att.mime_type));
                     const attachmentImage = attachments.filter((a) =>
                         /^image\//.test(a.mime_type),
                     )[0];
+                    const htmlImages =
+                        (!item.image || !item.image.url) && !attachmentImage
+                            ? getHtmlImages(item.description, config.src)
+                            : [];
+                    if (htmlImages.length !== 0) {
+                        htmlImages.forEach((i) =>
+                            attachments.push({ url: i, mime_type: mime.get(new URL(i).pathname) }),
+                        );
+                    }
+
                     feed.items.push(
                         omitNull({
                             id: item.guid,
                             title: item.title,
                             content_text:
-                                (item.description && _stripTags(item.description)) ||
+                                (item.description &&
+                                    textVersion(item.description, textVersionConfig)) ||
                                 (item['media:group'] &&
                                     item['media:group']['media:description'] &&
-                                    _stripTags(item['media:group']['media:description']['#'])) ||
+                                    textVersion(item['media:group']['media:description']['#'])) ||
                                 '-',
                             url: item.link,
                             image:
-                                item.image.url ||
+                                (item.image && item.image.url) ||
                                 (attachmentImage && attachmentImage.url) ||
-                                images[0] ||
+                                htmlImages[0] ||
                                 feed.icon,
-                            date_published: moment(item.pubdate).toISOString(),
-                            date_modified: moment(item.date).toISOString(),
+                            date_published: moment(item.pubdate).format(),
+                            date_modified: moment(item.date).format(),
                             tags: item.categories,
                             attachments,
                             _meta: {

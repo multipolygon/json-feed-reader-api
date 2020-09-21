@@ -64,6 +64,9 @@ function makeIndexFeeds({ inFilePaths, title, description, name, dirPath }) {
                         }),
                         _meta: {
                             itemCount: bucketFeed.items.length,
+                            audioCount: _.sumBy(bucketFeed.items, '_meta.audioCount'),
+                            videoCount: _.sumBy(bucketFeed.items, '_meta.videoCount'),
+                            imageCount: _.sumBy(bucketFeed.items, '_meta.imageCount'),
                         },
                     }),
                 ];
@@ -108,6 +111,17 @@ function makeCombinedFeeds({ inFilePaths, title, description, name, dirPath }) {
                         _meta: {
                             ...(i._meta || {}),
                             subtitle: (i._meta && i._meta.subtitle) || bucketFeed.title,
+                            audioCount:
+                                i.attachments &&
+                                i.attachments.filter((a) => /^audio\//.test(a.mime_type)).length,
+                            videoCount:
+                                ((i.attachments &&
+                                    i.attachments.filter((a) => /^video\//.test(a.mime_type))
+                                        .length) ||
+                                    0) + (i._youtube ? 1 : 0),
+                            imageCount:
+                                i.attachments &&
+                                i.attachments.filter((a) => /^image\//.test(a.mime_type)).length,
                         },
                     })),
                 ];
@@ -200,7 +214,7 @@ function mainIndexes(bucket) {
     });
 }
 
-['queue', 'favourites', 'archive', 'original'].forEach((bucket) => {
+['queue', 'favourite', 'archive', 'original'].forEach((bucket) => {
     console.log('----', bucket, '----');
     subCategoryIndexes(bucket);
     categoryIndexes(bucket);

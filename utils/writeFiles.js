@@ -50,7 +50,19 @@ export default function ({ dirPath, name, feed }) {
     const feedUrl = new URL(path.join(dirPath, `${name}.json`), contentHost).href;
     const homePageUrl = `${appHost}?i=${encodeURIComponent(feedUrl)}`;
     const pageCount = Math.ceil(feed.items.length / PER_PAGE);
-    const items = sortFeedItems(feed.items);
+    const items = sortFeedItems(feed.items).map(i => ({
+        ...i,
+        _meta: {
+            ...(i._meta || {}),
+            audioCount: (i.attachments || []).filter((a) => /^audio\//.test(a.mime_type))
+                .length,
+            videoCount: (i.attachments || []).filter((a) => /^video\//.test(a.mime_type))
+                .length,
+            imageCount: (i.attachments || []).filter((a) => /^image\//.test(a.mime_type))
+                .length,
+            featured: i._archive && i._archive.favourite,
+        },
+    }));
 
     _.range(1, (pageCount || 1) + 1).forEach((page) => {
         const fileName = `${name}${page === 1 ? '' : `_${page}`}`;
