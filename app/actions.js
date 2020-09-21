@@ -27,10 +27,9 @@ export default function actions({ app }) {
                 const origFeed = fs.existsSync(origFilePath)
                     ? JSON.parse(fs.readFileSync(origFilePath))
                     : { items: [] };
-                const queueFeed =
-                    bucket !== 'queue' && fs.existsSync(queueFilePath)
-                        ? JSON.parse(fs.readFileSync(queueFilePath))
-                        : { ...origFeed, items: [] };
+                const queueFeed = fs.existsSync(queueFilePath)
+                    ? JSON.parse(fs.readFileSync(queueFilePath))
+                    : { ...origFeed, items: [] };
                 const archiveFeed = fs.existsSync(archiveFilePath)
                     ? JSON.parse(fs.readFileSync(archiveFilePath))
                     : { ...origFeed, items: [] };
@@ -73,16 +72,28 @@ export default function actions({ app }) {
                 }
 
                 // console.log(outFeed);
+
                 writeFiles({ dirPath, name: bucket, feed: outFeed });
                 console.log('->', dirPath, '::', bucket, outFeed.items.length);
 
                 if (favourite !== undefined) {
-                    const favouritesFeed = {
+                    const favouriteFeed = {
                         ...outFeed,
                         items: outFeed.items.filter((i) => i._archive && i._archive.favourite),
                     };
-                    writeFiles({ dirPath, name: 'favourites', feed: favouritesFeed });
-                    console.log('->', dirPath, '::', 'favourites', favouritesFeed.items.length);
+                    writeFiles({ dirPath, name: 'favourite', feed: favouriteFeed });
+                    console.log('->', dirPath, '::', 'favourite', favouriteFeed.items.length);
+                }
+
+                if (action === 'add' && bucket === 'archive') {
+                    const newQueueFeed = {
+                        ...queueFeed,
+                        items: queueFeed.items.filter((i) => i.id !== id),
+                    };
+                    if (queueFeed.items.length > newQueueFeed.items.length) {
+                        writeFiles({ dirPath, name: 'queue', feed: newQueueFeed });
+                        console.log('->', dirPath, '::', 'queue', newQueueFeed.items.length);
+                    }
                 }
             } else {
                 console.log('Directory not found!');

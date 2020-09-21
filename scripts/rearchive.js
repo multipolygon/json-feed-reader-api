@@ -10,7 +10,7 @@ dotenv.config();
 
 const contentPath = process.env.CONTENT_PATH;
 
-glob.sync(path.join('*', '*', '*', 'favourites.json'), { cwd: contentPath })
+glob.sync(path.join('*', '*', '*', 'archive.json'), { cwd: contentPath })
     .slice(0, 10000000000)
     .forEach((feedPath) => {
         console.log(feedPath);

@@ -33,7 +33,6 @@ const sortFeedItems = (items) =>
     _.orderBy(
         items,
         [
-            '_meta.featured',
             'date_published',
             'date_modified',
             '_meta.itemCount',
@@ -41,7 +40,7 @@ const sortFeedItems = (items) =>
             '_meta.videoCount',
             '_meta.audioCount',
         ],
-        ['asc', 'desc', 'desc', 'desc', 'desc', 'desc', 'desc'],
+        ['desc', 'desc', 'desc', 'desc', 'desc', 'desc'],
     );
 
 const PER_PAGE = 1000;
