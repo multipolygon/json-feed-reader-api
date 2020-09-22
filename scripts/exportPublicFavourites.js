@@ -22,24 +22,20 @@ glob.sync(path.join('*', '*', '*', 'config.yaml'), { cwd: srcPath })
             console.log('--> SKIP');
         } else {
             const dirPath = path.dirname(filePath);
-            const archiveFilePath = path.join(srcPath, dirPath, 'archive.json');
+            const archiveFilePath = path.join(srcPath, dirPath, 'favourite.json');
             if (fs.existsSync(archiveFilePath)) {
                 const feed = JSON.parse(fs.readFileSync(path.join(srcPath, archiveFilePath)));
-                const favouriteItems = feed.items.filter((i) => i._archive && i._archive.favourite);
-                if (favouriteItems.length !== 0) {
+                if (feed.items.length !== 0) {
                     mkdirp.sync(path.join(targetPath, dirPath));
                     writeFiles({
                         dirPath,
                         name: 'favourite',
-                        feed: {
-                            ...feed,
-                            items: favouriteItems,
-                        },
+                        feed,
                         contentPath: targetPath,
                         contentHost: process.env.PUBLIC_CONTENT_HOST,
                         appHost: process.env.PUBLIC_APP_HOST,
                     });
-                    console.log('-->', favouriteItems.length);
+                    console.log('-->', feed.items.length);
                 }
             }
         }

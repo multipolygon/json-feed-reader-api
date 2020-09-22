@@ -49,9 +49,13 @@ export default function ({
     appHost = process.env.APP_HOST,
     contentHost = process.env.CONTENT_HOST,
 }) {
+    // console.log(contentPath, appHost, contentHost);
+
     const feedUrl = new URL(path.join(dirPath, `${name}.json`), contentHost).href;
     const homePageUrl = `${appHost}?i=${encodeURIComponent(feedUrl)}`;
+
     const pageCount = Math.ceil(feed.items.length / PER_PAGE);
+
     const items = sortFeedItems(feed.items).map(i => ({
         ...i,
         _meta: {
@@ -70,6 +74,7 @@ export default function ({
         const fileName = `${name}${page === 1 ? '' : `_${page}`}`;
 
         const feedPage = {
+            ...feed,
             version: 'https://jsonfeed.org/version/1',
             feed_url: feedUrl,
             _feed_url: {
@@ -77,7 +82,6 @@ export default function ({
                 rss: feedUrl.replace(/\.json\b/, '.rss.xml'),
                 atom: feedUrl.replace(/\.json\b/, '.atom.xml'),
             },
-            ...feed,
             home_page_url: feed.home_page_url || homePageUrl,
             ...(page < pageCount
                 ? {

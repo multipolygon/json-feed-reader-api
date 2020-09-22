@@ -229,7 +229,7 @@ async function convert(dirPath) {
                     feed,
                 });
             } catch (e) {
-                console.log(dirPath);
+                console.log('ERROR', dirPath, e);
             }
         } else {
             console.log('EMPTY', dirPath, type);
