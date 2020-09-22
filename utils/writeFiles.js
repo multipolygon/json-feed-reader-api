@@ -12,10 +12,6 @@ import omitNull from './omitNull.js';
 
 dotenv.config();
 
-const contentPath = process.env.CONTENT_PATH;
-const appHost = process.env.APP_HOST;
-const contentHost = process.env.CONTENT_HOST;
-
 const validator = new jsonschema.Validator();
 const geoSchema = JSON.parse(fs.readFileSync('./utils/schemas/geo.json'));
 
@@ -45,7 +41,14 @@ const sortFeedItems = (items) =>
 
 const PER_PAGE = 1000;
 
-export default function ({ dirPath, name, feed }) {
+export default function ({
+    dirPath,
+    name,
+    feed,
+    contentPath = process.env.CONTENT_PATH,
+    appHost = process.env.APP_HOST,
+    contentHost = process.env.CONTENT_HOST,
+}) {
     const feedUrl = new URL(path.join(dirPath, `${name}.json`), contentHost).href;
     const homePageUrl = `${appHost}?i=${encodeURIComponent(feedUrl)}`;
     const pageCount = Math.ceil(feed.items.length / PER_PAGE);

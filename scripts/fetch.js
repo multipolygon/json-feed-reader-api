@@ -1,11 +1,17 @@
+/* global process */
+
 import fetch from 'node-fetch';
 import fs from 'fs';
 import yaml from 'js-yaml';
 import path from 'path';
 import glob from 'glob';
 import UserAgent from 'user-agents';
+import dotenv from 'dotenv';
 
 const randomUserAgent = new UserAgent();
+
+dotenv.config();
+const contentPath = process.env.CONTENT_PATH;
 
 function sleep() {
     return new Promise((resolve) => {
@@ -18,7 +24,7 @@ async function run() {
 
     /* eslint-disable no-loop-func */
     for (const filePath of glob
-        .sync(path.join('public', 'feeds', '*', '*', '*', 'config.yaml'))
+        .sync(path.join(contentPath, '*', '*', '*', 'config.yaml'))
         .slice(0, 100000)) {
         // console.log(filePath);
         const config = yaml.safeLoad(fs.readFileSync(filePath));

@@ -1,0 +1,46 @@
+/* global process */
+
+import fs from 'fs';
+import path from 'path';
+import glob from 'glob';
+import dotenv from 'dotenv';
+import yaml from 'js-yaml';
+import mkdirp from 'mkdirp';
+import writeFiles from '../utils/writeFiles.js';
+
+dotenv.config();
+
+const srcPath = process.env.CONTENT_PATH;
+const targetPath = process.env.PUBLIC_CONTENT_PATH;
+
+glob.sync(path.join('*', '*', '*', 'config.yaml'), { cwd: srcPath })
+    .slice(0, 1000000000000)
+    .forEach((filePath) => {
+        console.log(filePath);
+        const config = yaml.safeLoad(fs.readFileSync(path.join(srcPath, filePath)));
+        if (config.private === true) {
+            console.log('--> SKIP');
+        } else {
+            const dirPath = path.dirname(filePath);
+            const archiveFilePath = path.join(srcPath, dirPath, 'archive.json');
+            if (fs.existsSync(archiveFilePath)) {
+                const feed = JSON.parse(fs.readFileSync(path.join(srcPath, archiveFilePath)));
+                const favouriteItems = feed.items.filter((i) => i._archive && i._archive.favourite);
+                if (favouriteItems.length !== 0) {
+                    mkdirp.sync(path.join(targetPath, dirPath));
+                    writeFiles({
+                        dirPath,
+                        name: 'favourite',
+                        feed: {
+                            ...feed,
+                            items: favouriteItems,
+                        },
+                        contentPath: targetPath,
+                        contentHost: process.env.PUBLIC_CONTENT_HOST,
+                        appHost: process.env.PUBLIC_APP_HOST,
+                    });
+                    console.log('-->', favouriteItems.length);
+                }
+            }
+        }
+    });

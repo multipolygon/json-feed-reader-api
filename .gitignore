@@ -6,3 +6,4 @@ playground
 public/feeds
 aws_sync*
 *.zip
+scripts/migrate*
