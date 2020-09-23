@@ -6,6 +6,7 @@ import glob from 'glob';
 import dotenv from 'dotenv';
 import yaml from 'js-yaml';
 import mkdirp from 'mkdirp';
+import _ from 'lodash';
 import writeFiles from '../utils/writeFiles.js';
 
 dotenv.config();
@@ -30,7 +31,13 @@ glob.sync(path.join('*', '*', '*', 'config.yaml'), { cwd: srcPath })
                     writeFiles({
                         dirPath,
                         name: 'favourite',
-                        feed,
+                        feed: {
+                            ...feed,
+                            items: feed.items.map(({ content_html: convertHtml, ...item }) => ({
+                                ...item,
+                                content_text: _.truncate(item.content_text, { length: 250 }),
+                            })),
+                        },
                         contentPath: targetPath,
                         contentHost: process.env.PUBLIC_CONTENT_HOST,
                         appHost: process.env.PUBLIC_APP_HOST,

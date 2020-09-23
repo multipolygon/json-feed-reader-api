@@ -13,12 +13,14 @@ import moment from 'moment';
 import { hideBin } from 'yargs/helpers';
 import Mimer from 'mimer';
 import textVersion from 'textversionjs';
+import MarkdownIt from 'markdown-it';
 import omitNull from '../utils/omitNull.js';
 import writeFiles from '../utils/writeFiles.js';
 
 dotenv.config();
 
 const mime = Mimer();
+const markdown = new MarkdownIt({ html: true, breaks: true, linkify: false });
 
 const { argv } = yargs(hideBin(process.argv));
 
@@ -26,7 +28,17 @@ const contentPath = process.env.CONTENT_PATH;
 
 const textVersionConfig = {
     headingStyle: 'hashify',
+    linkProcess: (href, text) => `[${text}](${href})`,
+    imgProcess: (src, alt) => `![${alt}](${src})`,
+    uIndentionChar: '* ',
+    oIndentionChar: '1. ',
+    listIndentionTabs: 1,
+    keepNbsps: true,
 };
+
+function convertToText(html) {
+    return textVersion(html, textVersionConfig).replace(/[\n]+/g, '\n\n');
+}
 
 function getHtmlImages(html, rootUrl) {
     // https://stackoverflow.com/a/15013465/5165
@@ -109,23 +121,22 @@ function loadXml(feedPath, config) {
                         (!item.image || !item.image.url) && !attachmentImage
                             ? getHtmlImages(item.description, config.src)
                             : [];
-                    if (htmlImages.length !== 0) {
-                        htmlImages.forEach((i) =>
-                            attachments.push({ url: i, mime_type: mime.get(new URL(i).pathname) }),
-                        );
-                    }
+
+                    const contentText =
+                        (item.description && convertToText(item.description)) ||
+                        (item['media:group'] &&
+                            item['media:group']['media:description'] &&
+                            convertToText(item['media:group']['media:description']['#'])) ||
+                        '-';
+
+                    const contentHtml = contentText ? markdown.render(contentText) : null;
 
                     feed.items.push(
                         omitNull({
                             id: item.guid,
                             title: item.title,
-                            content_text:
-                                (item.description &&
-                                    textVersion(item.description, textVersionConfig)) ||
-                                (item['media:group'] &&
-                                    item['media:group']['media:description'] &&
-                                    textVersion(item['media:group']['media:description']['#'])) ||
-                                '-',
+                            content_text: contentText,
+                            content_html: contentHtml,
                             url: item.link,
                             image:
                                 (item.image && item.image.url) ||
