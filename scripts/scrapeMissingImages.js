@@ -8,62 +8,63 @@ import glob from 'glob';
 import dotenv from 'dotenv';
 import _ from 'lodash';
 import ogs from 'open-graph-scraper';
+import UserAgent from 'user-agents';
 import writeFiles from '../utils/writeFiles.js';
 
+const randomUserAgent = new UserAgent();
 dotenv.config();
 
 const contentPath = process.env.CONTENT_PATH;
 
-function sleep() {
-    return new Promise((resolve) => {
-        setTimeout(resolve, 1000);
-    });
-}
-
 async function run() {
-    let queue = 0;
+    for (const bucket of ['archive', 'original']) {
+        for (const feedPath of glob
+            .sync(path.join('*', '*', 'tom_paton', `${bucket}.json`), { cwd: contentPath })
+            .slice(0, 1000000)) {
+            console.log(feedPath);
+            const feed = JSON.parse(fs.readFileSync(path.join(contentPath, feedPath)));
 
-    for (const feedPath of glob
-        .sync(path.join('*', '*', '*', 'archive.json'), { cwd: contentPath })
-        .slice(0, 1000000)) {
-        console.log(feedPath);
-        const feed = JSON.parse(fs.readFileSync(path.join(contentPath, feedPath)));
-        let modified = false;
-        Promise.all(
-            feed.items.map((item) => {
-                if (item._archive && item._archive.favourite && item.url && !item.image) {
-                    // console.log(' ->', item.url);
-                    queue += 1;
-                    return ogs({ url: item.url })
-                        .then(({ result }) => {
-                            if (result && result.success && result.ogImage) {
-                                const ogImage = _.isArray(result.ogImage)
-                                    ? result.ogImage[0]
-                                    : result.ogImage;
-                                if (ogImage && ogImage.url) {
-                                    item.image = new URL(ogImage.url, item.url).href;
-                                    console.log(item.url);
-                                    console.log('   ->', item.image);
-                                    modified = true;
-                                }
-                            }
-                            queue -= 1;
+            await Promise.all(
+                feed.items.map((item) => {
+                    const url = item.external_url || item.url;
+                    if (url && !item.image && !item._scrape_missing_images) {
+                        return ogs({
+                            url,
+                            ogImageFallback: false,
+                            headers: { 'User-Agent': randomUserAgent().toString() },
                         })
-                        .catch((e) => {
-                            queue -= 1;
-                            console.log(e);
-                        });
-                }
-                return undefined;
-            }),
-        ).then(() => {
-            if (modified) {
-                console.log('Done:', feedPath);
-                writeFiles({
-                    dirPath: path.dirname(feedPath),
-                    name: 'archive',
-                    feed,
-                });
+                            .then(({ result }) => {
+                                if (result && result.success && result.ogImage) {
+                                    const ogImage = _.isArray(result.ogImage)
+                                        ? result.ogImage[0]
+                                        : result.ogImage;
+                                    if (ogImage && ogImage.url) {
+                                        item.image = new URL(ogImage.url, item.url).href;
+                                        console.log(item.url);
+                                        console.log('   ->', item.image.slice(0, 100));
+                                    } else {
+                                        item._scrape_missing_images = { noimage: true };
+                                    }
+                                } else {
+                                    item._scrape_missing_images = { noimage: true };
+                                }
+                            })
+                            .catch((e) => {
+                                item._scrape_missing_images = { ignore: true };
+                                console.log(e);
+                            });
+                    }
+                    return undefined;
+                }),
+            );
+
+            writeFiles({
+                dirPath: path.dirname(feedPath),
+                name: bucket,
+                feed,
+            });
+
+            if (bucket === 'archive') {
                 writeFiles({
                     dirPath: path.dirname(feedPath),
                     name: 'favourite',
@@ -73,15 +74,10 @@ async function run() {
                     },
                 });
             }
-        });
 
-        while (queue > 3) {
-            await sleep();
+            console.log('Done:', feedPath);
+            console.log('--------------------------------');
         }
-    }
-
-    while (queue > 0) {
-        await sleep();
     }
 
     return 'Ok.';

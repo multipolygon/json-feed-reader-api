@@ -63,7 +63,7 @@ export default function actions({ app }) {
                             ),
                         };
 
-                        console.log(item);
+                        console.log(item._archive);
 
                         outFeed.items = _.uniqBy([item, ...outFeed.items], 'id');
                     }
