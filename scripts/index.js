@@ -86,6 +86,10 @@ function makeIndexes({ contentPath, contentHost, appHost, buckets }) {
         return feed;
     }
 
+    function globalId(url, id) {
+        return [...path.dirname(new URL(url).pathname).split('/'), id].join('~');
+    }
+
     function makeCombinedFeeds({ inFilePaths, title, description, name, dirPath }) {
         const feed = {
             title: _.upperFirst(title),
@@ -93,21 +97,21 @@ function makeIndexes({ contentPath, contentHost, appHost, buckets }) {
             items: inFilePaths.reduce((acc, indexPath) => {
                 console.log(' ->', indexPath);
                 const bucketFeed = JSON.parse(fs.readFileSync(indexPath));
-                const tags = path.dirname(path.relative(contentPath, indexPath)).split('/');
                 if (bucketFeed.items.length !== 0) {
                     return [
                         ...acc,
                         ...bucketFeed.items.map((i) => ({
                             ...i,
-                            id: [...tags, i.id].join('~'),
+                            id: (i._id && i._id.global) || globalId(bucketFeed.feed_url, i.id),
                             _id: {
                                 parent: i.id,
+                                global: globalId(bucketFeed.feed_url, i.id),
+                                ...(i._id || {}),
                             },
                             _feed_url: {
                                 parent: (i._feed_url && i._feed_url.parent) || bucketFeed.feed_url,
                             },
                             image: i.image || bucketFeed.icon,
-                            tags: _.uniq([...(i.tags || []), ...tags, tags.join('~')]),
                             _meta: {
                                 ...(i._meta || {}),
                                 subtitle: (i._meta && i._meta.subtitle) || bucketFeed.title,

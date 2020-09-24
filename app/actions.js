@@ -9,13 +9,11 @@ import writeFiles from '../utils/writeFiles.js';
 const contentPath = process.env.CONTENT_PATH;
 const allowedActions = ['add', 'rem'];
 const allowedBuckets = ['queue', 'archive'];
-const nl = '\n';
 
 export default function actions({ app }) {
     app.post('/actions/new', (request, response) => {
         const { feedPath, id, action, bucket, favourite } = request.body;
-        console.log('-----------------------------------------------------');
-        console.log(feedPath, nl, id, nl, action, nl, bucket, nl, favourite);
+        console.log({ feedPath, id, action, bucket, favourite });
 
         if (allowedBuckets.includes(bucket) && allowedActions.includes(action)) {
             const dirPath = path.dirname(feedPath);
@@ -63,7 +61,7 @@ export default function actions({ app }) {
                             ),
                         };
 
-                        console.log(item._archive);
+                        console.log({ item: item._archive });
 
                         outFeed.items = _.uniqBy([item, ...outFeed.items], 'id');
                     }
@@ -71,10 +69,8 @@ export default function actions({ app }) {
                     outFeed.items = outFeed.items.filter((i) => i.id !== id);
                 }
 
-                // console.log(outFeed);
-
                 writeFiles({ dirPath, name: bucket, feed: outFeed });
-                console.log('->', dirPath, '::', bucket, outFeed.items.length);
+                console.log({ dirPath, bucket, length: outFeed.items.length });
 
                 if (favourite !== undefined) {
                     const favouriteFeed = {

@@ -30,7 +30,8 @@ app.use(express.static('public'));
 app.use(useragent.express());
 
 const requestLogger = (request, response, next) => {
-    console.log(request.useragent.source);
+    console.log('-----------------------------------------------------');
+    // console.log(request.useragent.source);
     console.log(
         '[',
         request.useragent.platform,
