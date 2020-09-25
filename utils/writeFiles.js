@@ -35,8 +35,9 @@ const sortFeedItems = (items) =>
             '_meta.imageCount',
             '_meta.videoCount',
             '_meta.audioCount',
+            '_meta.youtubeCount',
         ],
-        ['desc', 'desc', 'desc', 'desc', 'desc', 'desc'],
+        ['desc', 'desc', 'desc', 'desc', 'desc', 'desc', 'desc'],
     );
 
 const PER_PAGE = 1000;
@@ -58,7 +59,7 @@ export default function ({
 
     const items = sortFeedItems(feed.items).map(i => ({
         ...i,
-        _meta: {
+        _meta: omitNull({
             ...(i._meta || {}),
             audioCount: (i.attachments || []).filter((a) => /^audio\//.test(a.mime_type))
                 .length,
@@ -66,8 +67,9 @@ export default function ({
                 .length,
             imageCount: (i.attachments || []).filter((a) => /^image\//.test(a.mime_type))
                 .length,
+            youtubeCount: (i._youtube || (i.url && new URL(i.url).host === 'www.youtube.com')) ? 1 : null,
             featured: i._archive && i._archive.favourite,
-        },
+        }),
     }));
 
     _.range(1, (pageCount || 1) + 1).forEach((page) => {

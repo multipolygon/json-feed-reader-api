@@ -147,14 +147,6 @@ function loadXml(feedPath, config) {
                             date_modified: moment(item.date).format(),
                             tags: item.categories,
                             attachments,
-                            _meta: {
-                                audioCount: attachments.filter((i) => /^audio\//.test(i.mime_type))
-                                    .length,
-                                videoCount: attachments.filter((i) => /^video\//.test(i.mime_type))
-                                    .length,
-                                imageCount: attachments.filter((i) => /^image\//.test(i.mime_type))
-                                    .length,
-                            },
                             _youtube: item['yt:videoid']
                                 ? {
                                       id: item['yt:videoid']['#'],

@@ -69,12 +69,27 @@ export default function actions({ app }) {
                     outFeed.items = outFeed.items.filter((i) => i.id !== id);
                 }
 
-                writeFiles({ dirPath, name: bucket, feed: outFeed });
+                const origMeta = {
+                    ...(origFeed && origFeed.home_page_url
+                        ? { home_page_url: origFeed.home_page_url }
+                        : {}),
+                    ...(origFeed && origFeed._feed_url ? { _feed_url: origFeed._feed_url } : {}),
+                };
+
+                writeFiles({
+                    dirPath,
+                    name: bucket,
+                    feed: {
+                        ...outFeed,
+                        ...origMeta,
+                    },
+                });
                 console.log({ dirPath, bucket, length: outFeed.items.length });
 
                 if (favourite !== undefined) {
                     const favouriteFeed = {
                         ...outFeed,
+                        ...origMeta,
                         items: outFeed.items.filter((i) => i._archive && i._archive.favourite),
                     };
                     writeFiles({ dirPath, name: 'favourite', feed: favouriteFeed });
@@ -84,6 +99,7 @@ export default function actions({ app }) {
                 if (action === 'add' && bucket === 'archive') {
                     const newQueueFeed = {
                         ...queueFeed,
+                        ...origMeta,
                         items: queueFeed.items.filter((i) => i.id !== id),
                     };
                     if (queueFeed.items.length > newQueueFeed.items.length) {

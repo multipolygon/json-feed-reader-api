@@ -33,6 +33,9 @@ glob.sync(path.join('*', '*', '*', 'config.yaml'), { cwd: srcPath })
                         name: 'favourite',
                         feed: {
                             ...feed,
+                            _feed_url: {
+                                src: config.src,
+                            },
                             items: feed.items.map(({ content_html: convertHtml, ...item }) => ({
                                 ...item,
                                 content_text: _.truncate(item.content_text, { length: 250 }),
