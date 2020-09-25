@@ -39,6 +39,6 @@ glob.sync(path.join('*', '*', '*', 'archive.json'), { cwd: contentPath })
                 return item;
             });
             console.log('  ', beforeCount, '=>', feed.items.length);
-            fs.writeFileSync(path.join(contentPath, feedPath), JSON.stringify(feed, null, 1));
+            // fs.writeFileSync(path.join(contentPath, feedPath), JSON.stringify(feed, null, 1));
         }
     });
