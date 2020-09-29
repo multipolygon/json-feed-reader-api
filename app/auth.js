@@ -13,12 +13,13 @@ export default function auth({ app }) {
 
     app.post('/auth', (request, response) => {
         const { username, password } = request.body;
+        console.log(passwordDigest(process.env.USERSALT, password));
         if (
             process.env.USERNAME === username &&
             process.env.USERPASS === passwordDigest(process.env.USERSALT, password)
         ) {
             response.send({
-                token: jwt.sign({ username }, jwtSecret, { expiresIn: '30d' }),
+                token: jwt.sign({ username }, jwtSecret, { expiresIn: '365d' }),
             });
         } else {
             response.status(422).send({ errors: { password: ['incorrect'] } });

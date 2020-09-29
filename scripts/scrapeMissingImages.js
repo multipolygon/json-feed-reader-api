@@ -17,9 +17,9 @@ dotenv.config();
 const contentPath = process.env.CONTENT_PATH;
 
 async function run() {
-    for (const bucket of ['archive', 'original']) {
+    for (const bucket of ['favourite']) {
         for (const feedPath of glob
-            .sync(path.join('*', '*', 'tom_paton', `${bucket}.json`), { cwd: contentPath })
+            .sync(path.join('*', '*', '*', `${bucket}.json`), { cwd: contentPath })
             .slice(0, 1000000)) {
             console.log(feedPath);
             const feed = JSON.parse(fs.readFileSync(path.join(contentPath, feedPath)));
@@ -63,17 +63,6 @@ async function run() {
                 name: bucket,
                 feed,
             });
-
-            if (bucket === 'archive') {
-                writeFiles({
-                    dirPath: path.dirname(feedPath),
-                    name: 'favourite',
-                    feed: {
-                        ...feed,
-                        items: feed.items.filter((i) => i._archive && i._archive.favourite),
-                    },
-                });
-            }
 
             console.log('Done:', feedPath);
             console.log('--------------------------------');

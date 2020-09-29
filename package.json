@@ -6,12 +6,12 @@
     "main": "run.js",
     "scripts": {
         "start": "node --experimental-modules run.js",
-        "dev": "nodemon --ignore public/ ./index.js",
+        "dev": "nodemon --ignore public/ --ignore scripts/ ./index.js",
         "linter": "eslint --fix --ext .js,.mjs,.cjs,.jsx --ignore-path .gitignore .",
         "prettier": "prettier --write '*.js' 'app/**/*.js' 'scripts/**/*.js'"
     },
-    "author": "Reilly Beacom",
-    "license": "",
+    "author": "multipolygon",
+    "license": "MIT",
     "dependencies": {
         "body-parser": "^1.19.0",
         "cors": "^2.8.5",
