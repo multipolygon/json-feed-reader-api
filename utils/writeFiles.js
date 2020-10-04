@@ -110,19 +110,29 @@ export default function ({
             JSON.stringify(feedPage, null, 1),
         );
 
-        fs.writeFileSync(
-            path.join(contentPath, dirPath, `${fileName}.rss.xml`),
-            jsonfeedToRSS(feedPage, {
-                feedURLFn: (url) => url.replace(/\.json\b/, '.rss.xml'),
-            }),
-        );
+        try {
+            fs.writeFileSync(
+                path.join(contentPath, dirPath, `${fileName}.rss.xml`),
+                jsonfeedToRSS(feedPage, {
+                    feedURLFn: (url) => url.replace(/\.json\b/, '.rss.xml'),
+                }),
+            );
+        } catch (e) {
+            console.log('ERROR:', dirPath, name);
+            console.error(e);
+        }
 
-        fs.writeFileSync(
-            path.join(contentPath, dirPath, `${fileName}.atom.xml`),
-            jsonfeedToAtom(feedPage, {
-                feedURLFn: (url) => url.replace(/\.json\b/, '.atom.xml'),
-            }),
-        );
+        try {
+            fs.writeFileSync(
+                path.join(contentPath, dirPath, `${fileName}.atom.xml`),
+                jsonfeedToAtom(feedPage, {
+                    feedURLFn: (url) => url.replace(/\.json\b/, '.atom.xml'),
+                }),
+            );
+        } catch (e) {
+            console.log('ERROR:', dirPath, name);
+            console.error(e);
+        }
     });
 
     if (feed.items.length !== 0) {
