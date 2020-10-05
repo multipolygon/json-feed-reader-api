@@ -65,6 +65,55 @@ async function getAll() {
     }
 }
 
+const itemUrl = (i, src) =>
+    `https://twitter.com/${
+        (i.retweeted_status && i.retweeted_status.user && i.retweeted_status.user.screen_name) ||
+        src
+    }/status/${(i.retweeted_status && i.retweeted_status.id_str) || i.id_str}`;
+
+const itemDate = (i) => moment(i.created_at, 'dd MMM DD HH:mm:ss ZZ YYYY', 'en').format();
+
+const itemImage = (i) => {
+    return (
+        (i &&
+            i.entities.media &&
+            i.entities.media[0] &&
+            i.entities.media[0].type === 'photo' &&
+            i.entities.media[0].media_url) ||
+        null
+    );
+};
+
+const itemAttachments = (i) =>
+    (i &&
+        i.extended_entities &&
+        i.extended_entities.media && [
+            ...(i.extended_entities.media
+                .filter((m) => m.type === 'video')
+                .map((m) => ({
+                    url: _.last(m.video_info.variants).url,
+                    mime_type: _.last(m.video_info.variants).content_type,
+                    _video: {
+                        aspect_ratio: m.video_info.aspect_ratio,
+                    },
+                })) || []),
+            ...((i.extended_entities.media.filter((m) => m.type === 'video').length === 0 &&
+                i.extended_entities.media
+                    .filter((m) => m.type === 'photo')
+                    .map((m) => ({
+                        url: m.media_url,
+                        mime_type: 'image/something',
+                    }))) ||
+                []),
+        ]) ||
+    null;
+
+const itemMedia = (i) =>
+    omitNull({
+        image: itemImage(i),
+        attachments: itemAttachments(i),
+    });
+
 function convertAll() {
     for (const src of feeds) {
         const data = JSON.parse(fs.readFileSync(filePath(src)));
@@ -79,51 +128,11 @@ function convertAll() {
                     title: _.truncate(i.full_text, { length: 140 }),
                     content_text:
                         (i.retweeted_status && i.retweeted_status.full_text) || i.full_text,
-                    url: `https://twitter.com/${
-                        (i.retweeted_status &&
-                            i.retweeted_status.user &&
-                            i.retweeted_status.user.screen_name) ||
-                        src
-                    }/status/${(i.retweeted_status && i.retweeted_status.id_str) || i.id_str}`,
-                    image:
-                        (i.entities.media &&
-                            i.entities.media[0] &&
-                            i.entities.media[0].type === 'photo' &&
-                            i.entities.media[0].media_url) ||
-                        null,
-                    date_published: moment(
-                        i.created_at,
-                        'dd MMM DD HH:mm:ss ZZ YYYY',
-                        'en',
-                    ).format(),
-                    date_modified: moment(
-                        i.created_at,
-                        'dd MMM DD HH:mm:ss ZZ YYYY',
-                        'en',
-                    ).format(),
-                    attachments:
-                        (i.extended_entities &&
-                            i.extended_entities.media && [
-                                ...(i.extended_entities.media
-                                    .filter((m) => m.type === 'video')
-                                    .map((m) => ({
-                                        url: _.last(m.video_info.variants).url,
-                                        mime_type: _.last(m.video_info.variants).content_type,
-                                        _video: {
-                                            aspect_ratio: m.video_info.aspect_ratio,
-                                        },
-                                    })) || []),
-                                ...((i.extended_entities.media.filter((m) => m.type === 'video')
-                                    .length === 0 &&
-                                    i.extended_entities.media
-                                        .filter((m) => m.type === 'photo')
-                                        .map((m) => ({
-                                            url: m.media_url,
-                                            mime_type: 'image/something',
-                                        }))) ||
-                                    []),
-                            ]) ||
-                        null,
+                    url: itemUrl(i, src),
+                    date_published: itemDate(i),
+                    date_modified: itemDate(i),
+                    ...itemMedia(i),
+                    ...itemMedia(i.retweeted_status),
                 }),
             ),
         };

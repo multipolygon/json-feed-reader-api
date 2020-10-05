@@ -23,10 +23,11 @@ glob.sync(path.join('*', '*', '*', 'config.yaml'), { cwd: srcPath })
             console.log('--> SKIP');
         } else {
             const dirPath = path.dirname(filePath);
-            const archiveFilePath = path.join(srcPath, dirPath, 'favourite.json');
+            const archiveFilePath = path.join(srcPath, dirPath, 'archive.json');
             if (fs.existsSync(archiveFilePath)) {
                 const feed = JSON.parse(fs.readFileSync(path.join(srcPath, archiveFilePath)));
-                if (feed.items.length !== 0) {
+                const items = feed.items.filter((i) => i._archive && i._archive.favourite);
+                if (items.length !== 0) {
                     mkdirp.sync(path.join(targetPath, dirPath));
                     writeFiles({
                         dirPath,
@@ -36,7 +37,7 @@ glob.sync(path.join('*', '*', '*', 'config.yaml'), { cwd: srcPath })
                             _feed_url: {
                                 src: config.src,
                             },
-                            items: feed.items.map(({ content_html: convertHtml, ...item }) => ({
+                            items: items.map(({ content_html: convertHtml, ...item }) => ({
                                 ...item,
                                 content_text: _.truncate(item.content_text, { length: 500 }),
                             })),
