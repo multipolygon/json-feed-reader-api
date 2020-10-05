@@ -17,7 +17,7 @@ dotenv.config();
 const contentPath = process.env.CONTENT_PATH;
 
 async function run() {
-    for (const bucket of ['favourite']) {
+    for (const bucket of ['archive']) {
         for (const feedPath of glob
             .sync(path.join('*', '*', '*', `${bucket}.json`), { cwd: contentPath })
             .slice(0, 1000000)) {

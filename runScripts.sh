@@ -2,6 +2,7 @@ node scripts/fetch.js
 node scripts/convert.js
 node scripts/twitterToJsonFeed.js
 node scripts/scrapeMissingImages.js
+node scripts/archiveToFavourite.js
 rm ../public-favourite-feeds/*/*/*/favourite*
 rm ../public-favourite-feeds/*/*/favourite*
 rm ../public-favourite-feeds/*/favourite*
