@@ -26,16 +26,12 @@ if (cat && sub && id && src) {
     );
     const configFilePath = path.join(configDirPath, 'config.yaml');
     console.log('-->', configFilePath);
-    if (!fs.existsSync(configFilePath)) {
-        mkdirp.sync(configDirPath);
-        fs.writeFileSync(
-            configFilePath,
-            yaml.safeDump({
-                src,
-            }),
-        );
-        console.log('Saved.');
-    } else {
-        console.error('Already exists!!!');
-    }
+    mkdirp.sync(configDirPath);
+    fs.writeFileSync(
+        configFilePath,
+        yaml.safeDump({
+            src,
+        }),
+    );
+    console.log('Saved.');
 }
