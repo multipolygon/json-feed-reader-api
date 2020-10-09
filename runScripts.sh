@@ -6,6 +6,7 @@ node scripts/archiveToFavourite.js
 rm ../public-favourite-feeds/*/*/*/favourite*
 rm ../public-favourite-feeds/*/*/favourite*
 rm ../public-favourite-feeds/*/favourite*
+node scripts/telegramToFeeds.js
 node scripts/exportPublicFavourites.js
 node scripts/index.js
 cd ../feeds/ && git add . && git commit -m - && git push

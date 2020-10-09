@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import mkdirp from 'mkdirp';
 import fetch from 'node-fetch';
+import { primaryId, fileNameSnakeCase } from './telegramUtils.js';
 
 dotenv.config();
 
@@ -17,19 +18,14 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
 bot.on(['message', 'edited_message'], (ctx) => {
     const message = ctx.editedMessage || ctx.message;
-    console.log(JSON.stringify(message, null, 4));
+    // console.log(JSON.stringify(message, null, 4));
 
     const dirPath = path.join(
         contentPath,
         'me',
         'blog',
         '_telegram',
-        (
-            message.media_group_id ||
-            (message.reply_to_message &&
-                (message.reply_to_message.media_group_id || message.reply_to_message.message_id)) ||
-            message.message_id
-        ).toString(),
+        primaryId(message),
         message.message_id.toString(),
     );
 
@@ -52,9 +48,11 @@ bot.on(['message', 'edited_message'], (ctx) => {
                                 const fileStream = fs.createWriteStream(
                                     path.join(
                                         dirPath,
-                                        file.file_name ||
+                                        `att_${
+                                            fileNameSnakeCase(file.file_name) ||
                                             file.file_unique_id +
-                                                path.extname(new URL(src).pathname),
+                                                path.extname(new URL(src).pathname)
+                                        }`,
                                     ),
                                 );
                                 response.body.pipe(fileStream);
