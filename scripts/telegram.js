@@ -40,33 +40,32 @@ bot.on(['message', 'edited_message'], (ctx) => {
             files.forEach((file) => {
                 telegram.getFileLink(file.file_id).then((src) => {
                     console.log(' ->', src);
-                    fetch(src)
-                        .then((response) => {
-                            if (!response.ok) {
-                                console.log(`     > ERROR ${response.status}`);
-                            } else {
-                                const fileStream = fs.createWriteStream(
-                                    path.join(
-                                        dirPath,
-                                        `att_${
-                                            fileNameSnakeCase(file.file_name) ||
-                                            file.file_unique_id +
-                                                path.extname(new URL(src).pathname)
-                                        }`,
-                                    ),
-                                );
-                                response.body.pipe(fileStream);
-                                response.body.on('error', () => {
-                                    console.log(`     > FAILED!`);
-                                });
-                                fileStream.on('finish', () => {
-                                    console.log(`     > OK`);
-                                });
-                            }
-                        })
-                        .catch(() => {
-                            console.log(`     > ERROR`);
-                        });
+                    const filePath = path.join(
+                        dirPath.replace('_telegram', '_attachments'),
+                        fileNameSnakeCase(file.file_name) ||
+                            file.file_unique_id + path.extname(new URL(src).pathname),
+                    );
+                    if (!fs.existsSync(filePath)) {
+                        fetch(src)
+                            .then((response) => {
+                                if (!response.ok) {
+                                    console.log(`     > ERROR ${response.status}`);
+                                } else {
+                                    mkdirp.sync(path.dirname(filePath));
+                                    const fileStream = fs.createWriteStream(filePath);
+                                    response.body.pipe(fileStream);
+                                    response.body.on('error', () => {
+                                        console.log(`     > FAILED!`);
+                                    });
+                                    fileStream.on('finish', () => {
+                                        console.log(`     > OK`);
+                                    });
+                                }
+                            })
+                            .catch(() => {
+                                console.log(`     > ERROR`);
+                            });
+                    }
                 });
             });
         }

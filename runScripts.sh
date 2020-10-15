@@ -11,5 +11,5 @@ node scripts/exportPublicFavourites.js
 node scripts/index.js
 cd ../feeds/ && git add . && git commit -m - && git push
 cd -
-cd ../public-favourite-feeds/ && git add . && git commit --amend -m - && git push -f
-cd -
+./scripts/rsync-attachments.sh
+./scripts/aws-sync-public-feeds.sh

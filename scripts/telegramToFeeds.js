@@ -9,6 +9,7 @@ import mkdirp from 'mkdirp';
 import _ from 'lodash';
 import moment from 'moment';
 import Mimer from 'mimer';
+import MarkdownIt from 'markdown-it';
 import writeFiles from '../utils/writeFiles.js';
 import omitNull from '../utils/omitNull.js';
 import { primaryId, fileNameSnakeCase } from './telegramUtils.js';
@@ -18,6 +19,7 @@ const contentPath = process.env.CONTENT_PATH;
 const contentHost = process.env.CONTENT_HOST;
 
 const mime = Mimer();
+const markdown = new MarkdownIt({ html: true, breaks: true, linkify: true });
 
 const parseTags = (text, entities) => {
     if (text && entities) {
@@ -32,11 +34,14 @@ const parseTags = (text, entities) => {
 const parsePhotos = (photos, dirPath, index) => {
     if (photos) {
         const photo = _.sortBy(photos, 'file_size')[
-            index !== undefined ? index : Math.floor(photos.length / 2)
+            index !== undefined ? index : photos.length - 1
         ];
-        const filePath = glob.sync(path.join(dirPath, `att_${photo.file_unique_id}.*`), {
-            cwd: contentPath,
-        })[0];
+        const filePath = glob.sync(
+            path.join(dirPath.replace('_telegram', '_attachments'), `${photo.file_unique_id}.*`),
+            {
+                cwd: contentPath,
+            },
+        )[0];
         return [
             {
                 url: new URL(filePath, contentHost).href,
@@ -54,7 +59,10 @@ const parsePhotos = (photos, dirPath, index) => {
 
 const parseDocument = (doc, dirPath) => {
     if (doc) {
-        const filePath = path.join(dirPath, fileNameSnakeCase(doc.file_name));
+        const filePath = path.join(
+            dirPath.replace('_telegram', '_attachments'),
+            fileNameSnakeCase(doc.file_name),
+        );
         return [
             {
                 url: new URL(filePath, contentHost).href,
@@ -85,12 +93,13 @@ glob.sync(path.join('me', 'blog', '_telegram', '*', '*', 'message.json'), { cwd:
             ...parsePhotos(message.photo, path.dirname(filePath)),
             ...parseDocument(message.document, path.dirname(filePath)),
         ];
-        const text = [
-            (items[id] && items[id].content_text) || null,
-            (message.text || message.caption || '').replace(/\s?#[A-Za-z0-9_]+\s?/g, ''),
-        ]
-            .filter(Boolean)
-            .join('\n\n');
+        const text =
+            [
+                (items[id] && items[id].content_text) || null,
+                (message.text || message.caption || '').replace(/\s?#[A-Za-z0-9_]+\s?/g, ''),
+            ]
+                .filter(Boolean)
+                .join('\n\n') || tags.join(', ');
         items[id] = omitNull({
             id,
             date_published: moment.unix(message.date).format(),
@@ -99,10 +108,18 @@ glob.sync(path.join('me', 'blog', '_telegram', '*', '*', 'message.json'), { cwd:
             ...(items[id] || {}),
             title: _.truncate(text, { length: 80 }),
             content_text: text,
+            content_html: markdown.render(text),
+            author: {
+                name: 'Multipolygon',
+                url: 'https://blog.multipolygon.net',
+            },
             attachments,
             tags: _.uniq([...((items[id] && items[id].tags) || []), ...tags]),
             _archive: {
-                favourite: true,
+                telegram: [
+                    ...((items[id] && items[id]._archive.telegram) || []),
+                    [id, message.message_id].join('-'),
+                ],
             },
         });
     });
@@ -112,7 +129,10 @@ const groups = Object.values(items)
     .reduce(
         (acc, i) => ({
             ...acc,
-            [i.tags[0] || 'untagged']: [...(acc[i.tags[0] || 'untagged'] || []), i],
+            [(i.tags && i.tags[0]) || 'untagged']: [
+                ...(acc[(i.tags && i.tags[0]) || 'untagged'] || []),
+                i,
+            ],
         }),
         {},
     );
@@ -137,14 +157,11 @@ Object.keys(groups).forEach((tag) => {
         items: groups[tag].map((i) => ({
             ...i,
             title: i.title || moment(i.created_at).format('Do MMM'),
-            content_text: i.content_text || '-',
         })),
     });
-    ['original', 'archive', 'favourite'].forEach((name) =>
-        writeFiles({
-            dirPath: path.join('me', 'blog', tag),
-            name,
-            feed: omitNull(feed),
-        }),
-    );
+    writeFiles({
+        dirPath: path.join('me', 'blog', tag),
+        name: 'original',
+        feed: omitNull(feed),
+    });
 });
