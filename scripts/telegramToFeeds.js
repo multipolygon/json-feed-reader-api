@@ -76,8 +76,10 @@ const parseDocument = (doc, dirPath) => {
 
 const items = {};
 
-glob.sync(path.join('me', 'blog', '_telegram', '*', '*', 'message.json'), { cwd: contentPath })
-    .sort()
+_.sortBy(
+    glob.sync(path.join('me', 'blog', '_telegram', '*', '*', 'message.json'), { cwd: contentPath }),
+    (i) => parseInt(_.last(path.basename(i).split(path.sep)))
+)
     .forEach((filePath) => {
         console.log(filePath);
         const message = JSON.parse(fs.readFileSync(path.join(contentPath, filePath)));
@@ -87,7 +89,7 @@ glob.sync(path.join('me', 'blog', '_telegram', '*', '*', 'message.json'), { cwd:
             ...parseTags(message.caption, message.caption_entities),
         ];
         // console.log(tags);
-        const image = parsePhotos(message.photo, path.dirname(filePath), 0)[0];
+        const image = items[id] && items[id].image || parsePhotos(message.photo, path.dirname(filePath), 0)[0];
         const attachments = [
             ...((items[id] && items[id].attachments) || []),
             ...parsePhotos(message.photo, path.dirname(filePath)),
@@ -116,10 +118,7 @@ glob.sync(path.join('me', 'blog', '_telegram', '*', '*', 'message.json'), { cwd:
             attachments,
             tags: _.uniq([...((items[id] && items[id].tags) || []), ...tags]),
             _archive: {
-                telegram: [
-                    ...((items[id] && items[id]._archive.telegram) || []),
-                    [id, message.message_id].join('-'),
-                ],
+                telegram: id,
             },
         });
     });
@@ -157,6 +156,7 @@ Object.keys(groups).forEach((tag) => {
         items: groups[tag].map((i) => ({
             ...i,
             title: i.title || moment(i.created_at).format('Do MMM'),
+            content_text: i.content_text || '-',
         })),
     });
     writeFiles({
