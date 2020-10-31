@@ -7,17 +7,25 @@ import fs from 'fs';
 import path from 'path';
 import mkdirp from 'mkdirp';
 import fetch from 'node-fetch';
-import { primaryId, fileNameSnakeCase } from './telegramUtils.js';
+import { primaryId, fileNameSnakeCase } from './util/telegram/helpers.js';
+import makeFeeds from './util/telegram/makeFeeds.js';
+import _ from 'lodash';
 
 dotenv.config();
 
 const contentPath = process.env.CONTENT_PATH;
-const telegramUserId = parseInt(process.env.TELEGRAM_USER_ID);
+const telegramUserIds = process.env.TELEGRAM_USER_IDS.split(',').map(i => i.trim()).map(i => parseInt(i));
 const telegram = new Telegram(process.env.TELEGRAM_BOT_TOKEN);
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
+console.log('Bot:', process.env.TELEGRAM_BOT_TOKEN.split(':')[0]);
+console.log('User IDs:', telegramUserIds);
+
 bot.on(['message', 'edited_message'], (ctx) => {
-    if (ctx.from.id === telegramUserId) {
+    if (!telegramUserIds.includes(ctx.from.id)) {
+        console.log('Unknown sender:', ctx.from.id);
+
+    } else {
         const message = ctx.editedMessage || ctx.message;
         // console.log(JSON.stringify(message, null, 4));
 
@@ -26,6 +34,7 @@ bot.on(['message', 'edited_message'], (ctx) => {
             'me',
             'blog',
             '_telegram',
+            (_.snakeCase(ctx.chat.title) || 'direct'),
             primaryId(message),
             message.message_id.toString(),
         );
@@ -71,6 +80,8 @@ bot.on(['message', 'edited_message'], (ctx) => {
                 });
             }
         });
+
+        makeFeeds();
 
         // return ctx.reply('ok');
     }
