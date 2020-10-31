@@ -21,20 +21,13 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 console.log('Bot:', process.env.TELEGRAM_BOT_TOKEN.split(':')[0]);
 console.log('User IDs:', telegramUserIds);
 
-bot.on(['message', 'edited_message'], (ctx) => {
-    if (!telegramUserIds.includes(ctx.from.id)) {
-        console.log('Unknown sender:', ctx.from.id);
-
-    } else {
-        const message = ctx.editedMessage || ctx.message;
-        // console.log(JSON.stringify(message, null, 4));
-
-        const dirPath = path.join(
+const saveMessage = (ctx, message) => {
+    const dirPath = path.join(
             contentPath,
             'me',
             'blog',
             '_telegram',
-            (_.snakeCase(ctx.chat.title) || 'direct'),
+            (_.snakeCase(ctx.chat.title) || '_direct'),
             primaryId(message),
             message.message_id.toString(),
         );
@@ -80,9 +73,20 @@ bot.on(['message', 'edited_message'], (ctx) => {
                 });
             }
         });
+};
 
+bot.on(['message', 'edited_message'], (ctx) => {
+    if (!telegramUserIds.includes(ctx.from.id)) {
+        console.log('Unknown sender:', ctx.from.id);
+
+    } else {
+        const message = ctx.editedMessage || ctx.message;
+        saveMessage(ctx, message);
+        // console.log(JSON.stringify(message, null, 4));
+        if (message.reply_to_message) {
+            saveMessage(ctx, message.reply_to_message);
+        }
         makeFeeds();
-
         // return ctx.reply('ok');
     }
 });
