@@ -57,6 +57,30 @@ const parsePhotos = (photos, dirPath, index) => {
     return [];
 };
 
+const parseVideo = (video, dirPath) => {
+    if (video) {
+        const filePath = glob.sync(
+            path.join(dirPath.replace('_telegram', '_attachments'), `${video.file_unique_id}.*`),
+            {
+                cwd: contentPath,
+            },
+        )[0];
+        return [
+            {
+                url: new URL(filePath, contentHost).href,
+                mime_type: video.mime_type || mime.get(filePath),
+                size_in_bytes: video.file_size,
+                _video: {
+                    duration: video.duration,
+                    width: video.width,
+                    height: video.height,
+                },
+            },
+        ];
+    }
+    return [];
+};
+
 const parseDocument = (doc, dirPath) => {
     if (doc) {
         const filePath = path.join(
@@ -93,12 +117,13 @@ _.sortBy(
         const attachments = [
             ...((items[id] && items[id].attachments) || []),
             ...parsePhotos(message.photo, path.dirname(filePath)),
+            ...parseVideo(message.video, path.dirname(filePath)),
             ...parseDocument(message.document, path.dirname(filePath)),
         ];
         const text =
             [
                 (items[id] && items[id].content_text) || null,
-                (message.text || message.caption || '').replace(/\s?#[A-Za-z0-9_]+\s?/g, ''),
+                (message.text || message.caption || '').replace(/#[a-z0-9_]+/g, ''),
             ]
                 .filter(Boolean)
                 .join('\n\n') || tags.join(', ');

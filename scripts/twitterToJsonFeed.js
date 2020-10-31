@@ -24,16 +24,18 @@ const client = new Twitter({
     access_token_secret: process.env.ACCESS_TOKEN_SECRET,
 });
 
-const feeds = yaml.safeLoad(fs.readFileSync(path.join(contentPath, 'twitter.yaml')));
+const config = yaml.safeLoad(fs.readFileSync(path.join(contentPath, 'twitter.yaml')));
 
-function get(src) {
+function get(screenName) {
     return new Promise((resolve) => {
+        console.log('Get:', screenName);
+        const options = config[screenName] || {};
         const params = {
-            screen_name: src,
+            screen_name: screenName,
             count: 200,
             trim_user: false,
-            exclude_replies: true,
-            include_rts: true,
+            exclude_replies: !Boolean(options.replies),
+            include_rts: Boolean(options.retweets),
             tweet_mode: 'extended',
         };
         client.get('statuses/user_timeline', params, (error, tweets) => {
@@ -46,29 +48,29 @@ function get(src) {
     });
 }
 
-function filePath(src, filename) {
+function filePath(screenName, filename) {
     return path.join(
         contentPath,
         'twitter',
         'twitter',
-        src.toLowerCase(),
+        screenName.toLowerCase(),
         filename || 'tweets.json',
     );
 }
 
 async function getAll() {
-    for (const src of feeds) {
-        const data = await get(src);
-        mkdirp.sync(path.dirname(filePath(src)));
-        fs.writeFileSync(filePath(src), JSON.stringify(data, null, 1));
-        console.log('-->', filePath(src));
+    for (const screenName of Object.keys(config)) {
+        const data = await get(screenName);
+        mkdirp.sync(path.dirname(filePath(screenName)));
+        fs.writeFileSync(filePath(screenName), JSON.stringify(data, null, 1));
+        console.log('-->', filePath(screenName));
     }
 }
 
-const itemUrl = (i, src) =>
+const itemUrl = (i, screenName) =>
     `https://twitter.com/${
         (i.retweeted_status && i.retweeted_status.user && i.retweeted_status.user.screen_name) ||
-        src
+        screenName
     }/status/${(i.retweeted_status && i.retweeted_status.id_str) || i.id_str}`;
 
 const itemDate = (i) => moment(i.created_at, 'dd MMM DD HH:mm:ss ZZ YYYY', 'en').format();
@@ -115,20 +117,20 @@ const itemMedia = (i) =>
     });
 
 function convertAll() {
-    for (const src of feeds) {
-        const data = JSON.parse(fs.readFileSync(filePath(src)));
+    for (const screenName of Object.keys(config)) {
+        const data = JSON.parse(fs.readFileSync(filePath(screenName)));
         const feed = {
             version: 'https://jsonfeed.org/version/1',
-            title: src,
-            feed_url: `https://twitter.com/${src}`,
-            home_page_url: `https://twitter.com/${src}`,
+            title: `@${screenName}`,
+            feed_url: `https://twitter.com/${screenName}`,
+            home_page_url: `https://twitter.com/${screenName}`,
             items: data.map((i) =>
                 omitNull({
                     id: i.id_str,
                     title: _.truncate(i.full_text, { length: 140 }),
                     content_text:
                         (i.retweeted_status && i.retweeted_status.full_text) || i.full_text,
-                    url: itemUrl(i, src),
+                    url: itemUrl(i, screenName),
                     date_published: itemDate(i),
                     date_modified: itemDate(i),
                     ...itemMedia(i),
@@ -139,15 +141,15 @@ function convertAll() {
         if (feed && feed.items) {
             try {
                 writeFiles({
-                    dirPath: path.join('twitter', 'twitter', src.toLowerCase()),
+                    dirPath: path.join('twitter', 'twitter', screenName.toLowerCase()),
                     name: 'original',
                     feed,
                 });
             } catch (e) {
-                console.log('ERROR', src);
+                console.log('ERROR', screenName);
             }
         } else {
-            console.log('EMPTY', src);
+            console.log('EMPTY', screenName);
         }
     }
 }

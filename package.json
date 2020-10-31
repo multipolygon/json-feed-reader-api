@@ -6,7 +6,7 @@
     "main": "run.js",
     "scripts": {
         "start": "node --experimental-modules run.js",
-        "dev": "nodemon --ignore public/ --ignore scripts/ ./index.js",
+        "dev": "nodemon --ignore public/ --ignore scripts/ ./run.js",
         "linter": "eslint --fix --ext .js,.mjs,.cjs,.jsx --ignore-path .gitignore .",
         "prettier": "prettier --write '*.js' 'app/**/*.js' 'scripts/**/*.js'"
     },
