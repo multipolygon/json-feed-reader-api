@@ -32,164 +32,161 @@ const parseTags = (text, entities) => {
     return [];
 };
 
-const parsePhotos = (photos, dirPath, index) => {
+const parsePhotos = (photos, attachmentsPath, index) => {
     if (photos) {
         const photo = _.sortBy(photos, 'file_size')[
             index !== undefined ? index : photos.length - 1
         ];
         const filePath = glob.sync(
-            path.join(dirPath.replace('_telegram', '_attachments'), `${photo.file_unique_id}.*`),
+            path.join(attachmentsPath, `${photo.file_unique_id}.*`),
             {
                 cwd: contentPath,
             },
         )[0];
-        return [
-            {
-                url: new URL(filePath, contentHost).href,
-                mime_type: mime.get(filePath),
-                size_in_bytes: photo.file_size,
-                _image: {
-                    width: photo.width,
-                    height: photo.height,
+        if (filePath) {
+            return [
+                {
+                    url: new URL(filePath, contentHost).href,
+                    mime_type: mime.get(filePath),
+                    size_in_bytes: photo.file_size,
+                    _image: {
+                        width: photo.width,
+                        height: photo.height,
+                    },
                 },
-            },
-        ];
+            ];
+        }
     }
     return [];
 };
 
-const parseVideo = (video, dirPath) => {
+const parseVideo = (video, attachmentsPath) => {
     if (video) {
         const filePath = glob.sync(
-            path.join(dirPath.replace('_telegram', '_attachments'), `${video.file_unique_id}.*`),
+            path.join(attachmentsPath, `${video.file_unique_id}.*`),
             {
                 cwd: contentPath,
             },
         )[0];
-        return [
-            {
-                url: new URL(filePath, contentHost).href,
-                mime_type: video.mime_type || mime.get(filePath),
-                size_in_bytes: video.file_size,
-                _video: {
-                    duration: video.duration,
-                    width: video.width,
-                    height: video.height,
+        if (filePath) {
+            return [
+                {
+                    url: new URL(filePath, contentHost).href,
+                    mime_type: video.mime_type || mime.get(filePath),
+                    size_in_bytes: video.file_size,
+                    _video: {
+                        duration: video.duration,
+                        width: video.width,
+                        height: video.height,
+                    },
                 },
-            },
-        ];
+            ];
+        }
     }
     return [];
 };
 
-const parseDocument = (doc, dirPath) => {
+const parseDocument = (doc, attachmentsPath) => {
     if (doc) {
         const filePath = path.join(
-            dirPath.replace('_telegram', '_attachments'),
+            attachmentsPath,
             fileNameSnakeCase(doc.file_name),
         );
-        return [
-            {
-                url: new URL(filePath, contentHost).href,
-                mime_type: mime.get(filePath),
-                size_in_bytes: doc.file_size,
-            },
-        ];
+        if (fs.existsSync(filePath)) {
+            return [
+                {
+                    url: new URL(filePath, contentHost).href,
+                    mime_type: mime.get(filePath),
+                    size_in_bytes: doc.file_size,
+                },
+            ];
+        }
     }
     return [];
 };
 
-export default () => {
+export default (group) => {
+    const feedPath = path.join('me', 'blog', group);
+    const dirPath = path.join(contentPath, feedPath);
+    const items = {};
+
     glob
-        .sync(path.join('me', 'blog', '_telegram', '*'), { cwd: contentPath })
+        .sync(path.join('me', 'blog', '_telegram', group, '*', '*', 'message.json'), { cwd: contentPath })
         .sort()
-        .forEach(
-            (groupFilePath) => {
-                const group = path.basename(groupFilePath);
+        .forEach((filePath) => {
+            // console.log(filePath);
 
-                // console.log('Group:', group);
+            const message = JSON.parse(fs.readFileSync(path.join(contentPath, filePath)));
+            const id = primaryId(message);
+            const tags = [
+                ...parseTags(message.text, message.entities),
+                ...parseTags(message.caption, message.caption_entities),
+            ];
+            // console.log(tags);
+            const attachmentsPath = path.join(feedPath, 'attachments', id, message.message_id.toString());
+            const image = items[id] && items[id].image || parsePhotos(message.photo, attachmentsPath, 0)[0];
+            const attachments = [
+                ...((items[id] && items[id].attachments) || []),
+                ...parsePhotos(message.photo, attachmentsPath),
+                ...parseVideo(message.video, attachmentsPath),
+                ...parseDocument(message.document, attachmentsPath),
+            ];
+            const text =
+                  [
+                      (items[id] && items[id].content_text) || null,
+                      (message.text || message.caption),
+                  ]
+                  .filter(Boolean)
+                  .join('\n\n')
+                  .trim();
+            items[id] = omitNull({
+                id,
+                date_published: moment.unix(message.date).format(),
+                date_modified: moment.unix(message.date).format(),
+                image: (image && image.url) || null,
+                ...(items[id] || {}),
+                title: _.truncate(text, { length: 140 }),
+                content_text: text,
+                content_html: markdown.render(text),
+                author: {
+                    name: 'Multipolygon',
+                    url: 'https://blog.multipolygon.net',
+                },
+                attachments,
+                tags: _.uniq([...((items[id] && items[id].tags) || []), ...tags]),
+                _archive: {
+                    telegram: id,
+                },
+            });
+        });
 
-                const items = {};
+    mkdirp.sync(dirPath);
 
-                glob
-                    .sync(path.join('me', 'blog', '_telegram', group, '*', '*', 'message.json'), { cwd: contentPath })
-                    .sort()
-                    .forEach((filePath) => {
-                        // console.log(filePath);
+    const configFilePath = path.join(dirPath, 'config.yaml');
 
-                        const message = JSON.parse(fs.readFileSync(path.join(contentPath, filePath)));
-                        const id = primaryId(message);
-                        const tags = [
-                            ...parseTags(message.text, message.entities),
-                            ...parseTags(message.caption, message.caption_entities),
-                        ];
-                        // console.log(tags);
-                        const image = items[id] && items[id].image || parsePhotos(message.photo, path.dirname(filePath), 0)[0];
-                        const attachments = [
-                            ...((items[id] && items[id].attachments) || []),
-                            ...parsePhotos(message.photo, path.dirname(filePath)),
-                            ...parseVideo(message.video, path.dirname(filePath)),
-                            ...parseDocument(message.document, path.dirname(filePath)),
-                        ];
-                        const text =
-                              [
-                                  (items[id] && items[id].content_text) || null,
-                                  (message.text || message.caption || '').replace(/#[a-z0-9_]+/g, ''),
-                              ]
-                              .filter(Boolean)
-                              .join('\n\n') || tags.join(', ');
-                        items[id] = omitNull({
-                            id,
-                            date_published: moment.unix(message.date).format(),
-                            date_modified: moment.unix(message.date).format(),
-                            image: (image && image.url) || null,
-                            ...(items[id] || {}),
-                            title: _.truncate(text, { length: 80 }),
-                            content_text: text,
-                            content_html: markdown.render(text),
-                            author: {
-                                name: 'Multipolygon',
-                                url: 'https://blog.multipolygon.net',
-                            },
-                            attachments,
-                            tags: _.uniq([...((items[id] && items[id].tags) || []), ...tags]),
-                            _archive: {
-                                telegram: id,
-                            },
-                        });
-                    });
+    const config = fs.existsSync(configFilePath)
+          ? yaml.safeLoad(fs.readFileSync(configFilePath))
+          : {
+              title: _.startCase(group),
+          };
 
-                const dirPath = path.join(contentPath, 'me', 'blog', group);
+    if (!fs.existsSync(configFilePath)) {
+        fs.writeFileSync(configFilePath, yaml.safeDump(config));
+    }
 
-                mkdirp.sync(dirPath);
+    const feed = {
+        title: config.title,
+        description: config.description,
+        items: Object.values(items).filter(i => i.title !== '' || (i.attachments && i.attachments.length !== 0)).map((i) => ({
+            ...i,
+            title: i.title || moment(i.date_published).format('Do MMM'),
+            content_text: i.content_text || '-',
+        })),
+    };
 
-                const configFilePath = path.join(dirPath, 'config.yaml');
-
-                const config = fs.existsSync(configFilePath)
-                      ? yaml.safeLoad(fs.readFileSync(configFilePath))
-                      : {
-                          title: _.startCase(group),
-                      };
-
-                if (!fs.existsSync(configFilePath)) {
-                    fs.writeFileSync(configFilePath, yaml.safeDump(config));
-                }
-
-                const feed = omitNull({
-                    title: config.title,
-                    description: config.description,
-                    items: Object.values(items).map((i) => ({
-                        ...i,
-                        title: i.title || moment(i.created_at).format('Do MMM'),
-                        content_text: i.content_text || '-',
-                    })),
-                });
-
-                writeFiles({
-                    dirPath: path.join('me', 'blog', group),
-                    name: 'original',
-                    feed: omitNull(feed),
-                });
-            }
-        );
+    writeFiles({
+        dirPath: feedPath,
+        name: 'original',
+        feed: feed,
+    });
 }
