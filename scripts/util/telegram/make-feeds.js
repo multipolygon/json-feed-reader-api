@@ -150,7 +150,7 @@ export default (group) => {
                     url: 'https://blog.multipolygon.net',
                 },
                 attachments,
-                tags: _.uniq([...((items[id] && items[id].tags) || []), ...tags]),
+                tags: _.uniq([...((items[id] && items[id].tags) || []), ...tags.map(t => t.toLowerCase())]),
                 _archive: {
                     telegram: id,
                 },
