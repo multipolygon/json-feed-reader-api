@@ -19,7 +19,7 @@ function sleep() {
     });
 }
 
-async function run() {
+export default async function () {
     let queue = 0;
 
     /* eslint-disable no-loop-func */
@@ -33,6 +33,8 @@ async function run() {
             const userAgent = randomUserAgent().toString();
 
             queue += 1;
+
+            // console.log(config.src);
 
             fetch(config.src, {
                 headers: {
@@ -82,5 +84,3 @@ async function run() {
 
     return 'Done';
 }
-
-run().then(console.log).catch(console.error);

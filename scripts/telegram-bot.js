@@ -7,14 +7,16 @@ import fs from 'fs';
 import path from 'path';
 import mkdirp from 'mkdirp';
 import fetch from 'node-fetch';
-import { primaryId, fileNameSnakeCase } from './util/telegram/helpers.js';
-import makeFeeds from './util/telegram/makeFeeds.js';
 import _ from 'lodash';
+import { primaryId, fileNameSnakeCase } from './util/telegram/helpers.js';
+import makeFeeds from './util/telegram/make-feeds.js';
 
 dotenv.config();
 
 const contentPath = process.env.CONTENT_PATH;
-const telegramUserIds = process.env.TELEGRAM_USER_IDS.split(',').map(i => i.trim()).map(i => parseInt(i));
+const telegramUserIds = process.env.TELEGRAM_USER_IDS.split(',')
+    .map((i) => i.trim())
+    .map((i) => parseInt(i, 10));
 const telegram = new Telegram(process.env.TELEGRAM_BOT_TOKEN);
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
@@ -38,7 +40,11 @@ const saveMessage = (group, message) => {
 
     fs.writeFileSync(path.join(dirPath, `message.json`), JSON.stringify(message, null, 1));
 
-    [message.photo, message.video ? [message.video] : null, message.document ? [message.document] : null].forEach((files) => {
+    [
+        message.photo,
+        message.video ? [message.video] : null,
+        message.document ? [message.document] : null,
+    ].forEach((files) => {
         if (files) {
             files.forEach((file) => {
                 telegram.getFileLink(file.file_id).then((src) => {
@@ -86,7 +92,6 @@ const saveMessage = (group, message) => {
 bot.on(['message', 'edited_message'], (ctx) => {
     if (!telegramUserIds.includes(ctx.from.id)) {
         console.log('Unknown sender:', ctx.from.id);
-
     } else {
         const group = _.snakeCase(ctx.chat.title) || '_direct';
         const message = ctx.editedMessage || ctx.message;

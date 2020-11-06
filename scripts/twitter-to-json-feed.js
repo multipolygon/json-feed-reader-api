@@ -28,13 +28,13 @@ const config = yaml.safeLoad(fs.readFileSync(path.join(contentPath, 'twitter.yam
 
 function get(screenName) {
     return new Promise((resolve) => {
-        console.log('Get:', screenName);
+        // console.log('Get:', screenName);
         const options = config[screenName] || {};
         const params = {
             screen_name: screenName,
             count: 200,
             trim_user: false,
-            exclude_replies: !Boolean(options.replies),
+            exclude_replies: !options.replies,
             include_rts: Boolean(options.retweets),
             tweet_mode: 'extended',
         };
@@ -63,7 +63,7 @@ async function getAll() {
         const data = await get(screenName);
         mkdirp.sync(path.dirname(filePath(screenName)));
         fs.writeFileSync(filePath(screenName), JSON.stringify(data, null, 1));
-        console.log('-->', filePath(screenName));
+        // console.log('-->', filePath(screenName));
     }
 }
 
@@ -154,10 +154,8 @@ function convertAll() {
     }
 }
 
-async function run() {
+export default async function () {
     await getAll();
     convertAll();
     return 'Done';
 }
-
-run().then(console.log).catch(console.error);

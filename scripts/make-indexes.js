@@ -1,4 +1,4 @@
-/* global process URL URLSearchParams */
+/* global URL URLSearchParams */
 
 import fs from 'fs';
 import path from 'path';
@@ -33,13 +33,13 @@ const averageCoord = (items) => {
     return coord([average(coordAry.map((i) => i[0])), average(coordAry.map((i) => i[1]))]);
 };
 
-function makeIndexes({ contentPath, contentHost, appHost, buckets }) {
+export default function ({ contentPath, contentHost, appHost, buckets }) {
     function makeIndexFeeds({ inFilePaths, title, description, name, dirPath }) {
         const feed = {
             title: _.upperFirst(title),
             description,
             items: inFilePaths.reduce((acc, indexPath) => {
-                console.log(' ->', indexPath);
+                // console.log(' ->', indexPath);
                 const bucketFeed = JSON.parse(fs.readFileSync(indexPath));
                 if (bucketFeed.items.length !== 0) {
                     const url = new URL(appHost);
@@ -72,7 +72,7 @@ function makeIndexes({ contentPath, contentHost, appHost, buckets }) {
             }, []),
         };
 
-        console.log('   ---->', feed.items.length);
+        // console.log('   ---->', feed.items.length);
 
         writeFiles({
             dirPath,
@@ -95,7 +95,7 @@ function makeIndexes({ contentPath, contentHost, appHost, buckets }) {
             title: _.upperFirst(title),
             description,
             items: inFilePaths.reduce((acc, indexPath) => {
-                console.log(' ->', indexPath);
+                // console.log(' ->', indexPath);
                 const bucketFeed = JSON.parse(fs.readFileSync(indexPath));
                 if (bucketFeed.items.length !== 0) {
                     return [
@@ -136,7 +136,7 @@ function makeIndexes({ contentPath, contentHost, appHost, buckets }) {
             }, []),
         };
 
-        console.log('   ---->', feed.items.length);
+        // console.log('   ---->', feed.items.length);
 
         writeFiles({
             dirPath,
@@ -155,7 +155,7 @@ function makeIndexes({ contentPath, contentHost, appHost, buckets }) {
     function subCategoryIndexes(bucket) {
         for (const dirPath of glob.sync(path.join('*', '*'), { cwd: contentPath })) {
             if (fs.lstatSync(path.join(contentPath, dirPath)).isDirectory()) {
-                console.log(dirPath);
+                // console.log(dirPath);
                 makeIndexFeeds({
                     inFilePaths: glob.sync(path.join(contentPath, dirPath, '*', `${bucket}.json`)),
                     title: path.basename(dirPath),
@@ -183,7 +183,7 @@ function makeIndexes({ contentPath, contentHost, appHost, buckets }) {
     function categoryIndexes(bucket) {
         for (const dirPath of glob.sync(path.join('*'), { cwd: contentPath })) {
             if (fs.lstatSync(path.join(contentPath, dirPath)).isDirectory()) {
-                console.log(dirPath);
+                // console.log(dirPath);
                 makeIndexFeeds({
                     inFilePaths: glob.sync(
                         path.join(contentPath, dirPath, '*', `${bucket}_index.json`),
@@ -205,8 +205,8 @@ function makeIndexes({ contentPath, contentHost, appHost, buckets }) {
     }
 
     function mainIndexes(bucket) {
-        console.log(contentPath);
-        console.log(bucket);
+        // console.log(contentPath);
+        // console.log(bucket);
         makeIndexFeeds({
             inFilePaths: glob.sync(path.join(contentPath, '*', `${bucket}_index.json`)),
             title: 'Index',
@@ -224,25 +224,9 @@ function makeIndexes({ contentPath, contentHost, appHost, buckets }) {
     }
 
     buckets.forEach((bucket) => {
-        console.log('----', bucket, '----');
+        // console.log('----', bucket, '----');
         subCategoryIndexes(bucket);
         categoryIndexes(bucket);
         mainIndexes(bucket);
-    });
-}
-
-makeIndexes({
-    contentPath: process.env.CONTENT_PATH,
-    contentHost: process.env.CONTENT_HOST,
-    appHost: process.env.APP_HOST,
-    buckets: ['queue', 'favourite', 'archive', 'original'],
-});
-
-if (fs.existsSync(process.env.PUBLIC_CONTENT_PATH)) {
-    makeIndexes({
-        contentPath: process.env.PUBLIC_CONTENT_PATH,
-        contentHost: process.env.PUBLIC_CONTENT_HOST,
-        appHost: process.env.PUBLIC_APP_HOST,
-        buckets: ['favourite'],
     });
 }

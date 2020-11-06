@@ -37,12 +37,9 @@ const parsePhotos = (photos, attachmentsPath, index) => {
         const photo = _.sortBy(photos, 'file_size')[
             index !== undefined ? index : photos.length - 1
         ];
-        const filePath = glob.sync(
-            path.join(attachmentsPath, `${photo.file_unique_id}.*`),
-            {
-                cwd: contentPath,
-            },
-        )[0];
+        const filePath = glob.sync(path.join(attachmentsPath, `${photo.file_unique_id}.*`), {
+            cwd: contentPath,
+        })[0];
         if (filePath) {
             return [
                 {
@@ -62,12 +59,9 @@ const parsePhotos = (photos, attachmentsPath, index) => {
 
 const parseVideo = (video, attachmentsPath) => {
     if (video) {
-        const filePath = glob.sync(
-            path.join(attachmentsPath, `${video.file_unique_id}.*`),
-            {
-                cwd: contentPath,
-            },
-        )[0];
+        const filePath = glob.sync(path.join(attachmentsPath, `${video.file_unique_id}.*`), {
+            cwd: contentPath,
+        })[0];
         if (filePath) {
             return [
                 {
@@ -88,10 +82,7 @@ const parseVideo = (video, attachmentsPath) => {
 
 const parseDocument = (doc, attachmentsPath) => {
     if (doc) {
-        const filePath = path.join(
-            attachmentsPath,
-            fileNameSnakeCase(doc.file_name),
-        );
+        const filePath = path.join(attachmentsPath, fileNameSnakeCase(doc.file_name));
         if (fs.existsSync(filePath)) {
             return [
                 {
@@ -110,8 +101,9 @@ export default (group) => {
     const dirPath = path.join(contentPath, feedPath);
     const items = {};
 
-    glob
-        .sync(path.join('me', 'blog', '_telegram', group, '*', '*', 'message.json'), { cwd: contentPath })
+    glob.sync(path.join('me', 'blog', '_telegram', group, '*', '*', 'message.json'), {
+        cwd: contentPath,
+    })
         .sort()
         .forEach((filePath) => {
             // console.log(filePath);
@@ -123,22 +115,27 @@ export default (group) => {
                 ...parseTags(message.caption, message.caption_entities),
             ];
             // console.log(tags);
-            const attachmentsPath = path.join(feedPath, 'attachments', id, message.message_id.toString());
-            const image = items[id] && items[id].image || parsePhotos(message.photo, attachmentsPath, 0)[0];
+            const attachmentsPath = path.join(
+                feedPath,
+                'attachments',
+                id,
+                message.message_id.toString(),
+            );
+            const image =
+                (items[id] && items[id].image) || parsePhotos(message.photo, attachmentsPath, 0)[0];
             const attachments = [
                 ...((items[id] && items[id].attachments) || []),
                 ...parsePhotos(message.photo, attachmentsPath),
                 ...parseVideo(message.video, attachmentsPath),
                 ...parseDocument(message.document, attachmentsPath),
             ];
-            const text =
-                  [
-                      (items[id] && items[id].content_text) || null,
-                      (message.text || message.caption),
-                  ]
-                  .filter(Boolean)
-                  .join('\n\n')
-                  .trim();
+            const text = [
+                (items[id] && items[id].content_text) || null,
+                message.text || message.caption,
+            ]
+                .filter(Boolean)
+                .join('\n\n')
+                .trim();
             items[id] = omitNull({
                 id,
                 date_published: moment.unix(message.date).format(),
@@ -165,8 +162,8 @@ export default (group) => {
     const configFilePath = path.join(dirPath, 'config.yaml');
 
     const config = fs.existsSync(configFilePath)
-          ? yaml.safeLoad(fs.readFileSync(configFilePath))
-          : {
+        ? yaml.safeLoad(fs.readFileSync(configFilePath))
+        : {
               title: _.startCase(group),
           };
 
@@ -177,16 +174,18 @@ export default (group) => {
     const feed = {
         title: config.title,
         description: config.description,
-        items: Object.values(items).filter(i => i.title !== '' || (i.attachments && i.attachments.length !== 0)).map((i) => ({
-            ...i,
-            title: i.title || moment(i.date_published).format('Do MMM'),
-            content_text: i.content_text || '-',
-        })),
+        items: Object.values(items)
+            .filter((i) => i.title !== '' || (i.attachments && i.attachments.length !== 0))
+            .map((i) => ({
+                ...i,
+                title: i.title || moment(i.date_published).format('Do MMM'),
+                content_text: i.content_text || '-',
+            })),
     };
 
     writeFiles({
         dirPath: feedPath,
         name: 'original',
-        feed: feed,
+        feed,
     });
-}
+};

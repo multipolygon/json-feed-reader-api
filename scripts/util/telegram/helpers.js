@@ -9,7 +9,7 @@ export const fileNameSnakeCase = (fileName) =>
 export const primaryId = (message) =>
     (
         (message.reply_to_message &&
-         (message.reply_to_message.media_group_id || message.reply_to_message.message_id)) ||
+            (message.reply_to_message.media_group_id || message.reply_to_message.message_id)) ||
         message.media_group_id ||
         message.message_id
     ).toString();

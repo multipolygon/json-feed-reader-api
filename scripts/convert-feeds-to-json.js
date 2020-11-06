@@ -4,13 +4,11 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import path from 'path';
 import _stripTags from 'underscore.string/stripTags.js';
-import yargs from 'yargs';
 import _ from 'lodash';
 import glob from 'glob';
 import FeedParser from 'feedparser';
 import dotenv from 'dotenv';
 import moment from 'moment';
-import { hideBin } from 'yargs/helpers';
 import Mimer from 'mimer';
 import textVersion from 'textversionjs';
 import MarkdownIt from 'markdown-it';
@@ -21,8 +19,6 @@ dotenv.config();
 
 const mime = Mimer();
 const markdown = new MarkdownIt({ html: true, breaks: true, linkify: false });
-
-const { argv } = yargs(hideBin(process.argv));
 
 const contentPath = process.env.CONTENT_PATH;
 
@@ -241,7 +237,7 @@ async function convert(dirPath) {
     return 'ok';
 }
 
-async function all() {
+export default async function () {
     for (const configPath of glob
         .sync(path.join('*', '*', '*', 'config.yaml'), { cwd: contentPath })
         .slice(0, 1000000)) {
@@ -249,7 +245,3 @@ async function all() {
     }
     return 'ok';
 }
-
-(argv.f ? convert(path.relative(contentPath, argv.f)) : all())
-    .then(console.log)
-    .catch(console.error);

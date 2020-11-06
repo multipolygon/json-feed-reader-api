@@ -16,12 +16,12 @@ dotenv.config();
 
 const contentPath = process.env.CONTENT_PATH;
 
-async function run() {
+export default async function () {
     for (const bucket of ['archive']) {
         for (const feedPath of glob
             .sync(path.join('*', '*', '*', `${bucket}.json`), { cwd: contentPath })
             .slice(0, 1000000)) {
-            console.log(feedPath);
+            // console.log(feedPath);
             const feed = JSON.parse(fs.readFileSync(path.join(contentPath, feedPath)));
 
             await Promise.all(
@@ -64,12 +64,10 @@ async function run() {
                 feed,
             });
 
-            console.log('Done:', feedPath);
-            console.log('--------------------------------');
+            // console.log('Done:', feedPath);
+            // console.log('--------------------------------');
         }
     }
 
     return 'Ok.';
 }
-
-run().then(console.log).catch(console.error);
