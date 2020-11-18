@@ -142,7 +142,7 @@ export default (group) => {
                 date_modified: moment.unix(message.date).format(),
                 image: (image && image.url) || null,
                 ...(items[id] || {}),
-                title: _.truncate(text, { length: 140 }),
+                title: _.truncate(text.split('\n')[0] || '', { length: 100 }),
                 content_text: text,
                 content_html: markdown.render(text),
                 author: {
@@ -150,7 +150,10 @@ export default (group) => {
                     url: 'https://blog.multipolygon.net',
                 },
                 attachments,
-                tags: _.uniq([...((items[id] && items[id].tags) || []), ...tags.map(t => t.toLowerCase())]),
+                tags: _.uniq([
+                    ...((items[id] && items[id].tags) || []),
+                    ...tags.map((t) => t.toLowerCase()),
+                ]),
                 _archive: {
                     telegram: id,
                 },

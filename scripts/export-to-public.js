@@ -11,15 +11,17 @@ import writeFiles from '../utils/writeFiles.js';
 
 dotenv.config();
 
-const srcRootPath = process.env.CONTENT_PATH;
-const targetRootPath = process.env.PUBLIC_CONTENT_PATH;
-const contentHost = process.env.CONTENT_HOST;
-const publicContentHost = process.env.PUBLIC_CONTENT_HOST;
-const publicAppHost = process.env.PUBLIC_APP_HOST;
+const {
+    CONTENT_PATH,
+    CONTENT_HOST,
+    PUBLIC_CONTENT_PATH,
+    PUBLIC_CONTENT_HOST,
+    PUBLIC_APP_HOST,
+} = process.env;
 
 function copyAttachment(url) {
-    const src = url.replace(contentHost, srcRootPath);
-    const dest = url.replace(contentHost, targetRootPath);
+    const src = url.replace(CONTENT_HOST, CONTENT_PATH);
+    const dest = url.replace(CONTENT_HOST, PUBLIC_CONTENT_PATH);
     if (!fs.existsSync(src)) {
         console.log('  -->', src, fs.existsSync(src) ? '' : 'MISSING!');
     }
@@ -28,23 +30,23 @@ function copyAttachment(url) {
 }
 
 function exportFeedFile(srcFilePath) {
-    if (fs.existsSync(path.join(srcRootPath, srcFilePath))) {
-        const feed = JSON.parse(fs.readFileSync(path.join(srcRootPath, srcFilePath)));
-        if (feed.items.length !== 0 || fs.existsSync(path.join(targetRootPath, srcFilePath))) {
+    if (fs.existsSync(path.join(CONTENT_PATH, srcFilePath))) {
+        const feed = JSON.parse(fs.readFileSync(path.join(CONTENT_PATH, srcFilePath)));
+        if (feed.items.length !== 0 || fs.existsSync(path.join(PUBLIC_CONTENT_PATH, srcFilePath))) {
             // console.log('-->', srcFilePath, `[${feed.items.length}]`, feed.items.length === 0 ? 'EMPTY!' : '');
 
             const dirPath = path.dirname(srcFilePath);
             const name = path.basename(srcFilePath, path.extname(srcFilePath));
 
-            mkdirp.sync(path.join(targetRootPath, dirPath));
+            mkdirp.sync(path.join(PUBLIC_CONTENT_PATH, dirPath));
 
             feed.items.forEach((item) => {
-                if (item.image && _.startsWith(item.image, contentHost)) {
+                if (item.image && _.startsWith(item.image, CONTENT_HOST)) {
                     copyAttachment(item.image);
                 }
                 if (item.attachments) {
                     item.attachments.forEach((att) => {
-                        if (_.startsWith(att.url, contentHost)) {
+                        if (_.startsWith(att.url, CONTENT_HOST)) {
                             copyAttachment(att.url);
                         }
                     });
@@ -60,33 +62,33 @@ function exportFeedFile(srcFilePath) {
                         ...i,
                         ...(i.image
                             ? {
-                                  image: i.image.replace(contentHost, publicContentHost),
+                                  image: i.image.replace(CONTENT_HOST, PUBLIC_CONTENT_HOST),
                               }
                             : {}),
                         ...(i.attachments
                             ? {
                                   attachments: i.attachments.map((a) => ({
                                       ...a,
-                                      url: a.url.replace(contentHost, publicContentHost),
+                                      url: a.url.replace(CONTENT_HOST, PUBLIC_CONTENT_HOST),
                                   })),
                               }
                             : {}),
                     })),
                 },
-                contentPath: targetRootPath,
-                contentHost: publicContentHost,
-                appHost: publicAppHost,
+                contentPath: PUBLIC_CONTENT_PATH,
+                contentHost: PUBLIC_CONTENT_HOST,
+                appHost: PUBLIC_APP_HOST,
             });
         }
     }
 }
 
 export default function () {
-    yaml.safeLoad(fs.readFileSync(path.join(srcRootPath, 'public.yaml'))).forEach((globPath) =>
+    yaml.safeLoad(fs.readFileSync(path.join(CONTENT_PATH, 'public.yaml'))).forEach((globPath) =>
         glob
-            .sync(globPath, { cwd: srcRootPath })
+            .sync(globPath, { cwd: CONTENT_PATH })
             .filter((f) => {
-                const configFilePath = path.join(srcRootPath, path.dirname(f), 'config.yaml');
+                const configFilePath = path.join(CONTENT_PATH, path.dirname(f), 'config.yaml');
                 if (fs.existsSync(configFilePath)) {
                     const config = yaml.safeLoad(fs.readFileSync(configFilePath));
                     if (config.private === true) {

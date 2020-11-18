@@ -172,7 +172,7 @@ function loadJson(feedPath) {
     const orig = jsonParse(fs.readFileSync(feedPath));
     if (orig) {
         return omitNull({
-            ..._.pick(orig, ['version', 'home_page_url', 'feed_url']),
+            ..._.pick(orig, ['title', 'version', 'home_page_url', 'feed_url']),
             items: (orig.items || []).map((i) =>
                 _.pick(
                     {

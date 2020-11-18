@@ -2,6 +2,8 @@
 
 import dotenv from 'dotenv';
 import fs from 'fs';
+import execute from '@getvim/execute';
+import path from 'path';
 
 import fetchFeeds from './fetch-feeds.js';
 import convertFeeds from './convert-feeds-to-json.js';
@@ -14,7 +16,25 @@ import exportToPublic from './export-to-public.js';
 
 dotenv.config();
 
+const {
+    APP_HOST,
+    CONTENT_HOST,
+    CONTENT_PATH,
+    PUBLIC_APP_HOST,
+    PUBLIC_CONTENT_HOST,
+    PUBLIC_CONTENT_PATH,
+} = process.env;
+
+const exec = execute.execute;
+
 async function run() {
+    console.log('Git commit feeds...');
+    console.log(
+        await exec(
+            `cd ${CONTENT_PATH} && git add . && git commit -m - && git push || echo 'No action.'`,
+        ),
+    );
+
     console.log('fetchFeeds...');
     await fetchFeeds();
 
@@ -35,26 +55,34 @@ async function run() {
 
     console.log('makeIndexes...');
     makeIndexes({
-        contentPath: process.env.CONTENT_PATH,
-        contentHost: process.env.CONTENT_HOST,
-        appHost: process.env.APP_HOST,
+        contentPath: CONTENT_PATH,
+        contentHost: CONTENT_HOST,
+        appHost: APP_HOST,
         buckets: ['queue', 'favourite', 'archive', 'original'],
     });
 
     console.log('--PUBLIC--');
 
+    console.log('rm favourite*...');
+    await exec(`rm ${path.join(PUBLIC_CONTENT_PATH, '*/*/*/favourite*')}`);
+    await exec(`rm ${path.join(PUBLIC_CONTENT_PATH, '*/*/favourite*')}`);
+    await exec(`rm ${path.join(PUBLIC_CONTENT_PATH, '*/favourite*')}`);
+
     console.log('exportToPublic...');
     exportToPublic();
 
     console.log('makeIndexes...');
-    if (fs.existsSync(process.env.PUBLIC_CONTENT_PATH)) {
+    if (fs.existsSync(PUBLIC_CONTENT_PATH)) {
         makeIndexes({
-            contentPath: process.env.PUBLIC_CONTENT_PATH,
-            contentHost: process.env.PUBLIC_CONTENT_HOST,
-            appHost: process.env.PUBLIC_APP_HOST,
+            contentPath: PUBLIC_CONTENT_PATH,
+            contentHost: PUBLIC_CONTENT_HOST,
+            appHost: PUBLIC_APP_HOST,
             buckets: ['favourite'],
         });
     }
+
+    console.log('AWS S3 Sync public feeds...');
+    console.log(await exec(`cd ${PUBLIC_CONTENT_PATH} && ./aws-sync.sh`));
 
     return 'Done';
 }

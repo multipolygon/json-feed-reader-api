@@ -161,7 +161,7 @@ export default function ({ contentPath, contentHost, appHost, buckets }) {
                     title: path.basename(dirPath),
                     description: `All feeds in ${dirPath
                         .split(path.sep)
-                        .map(_.upperFirst)
+                        .map(_.startCase)
                         .join(' > ')}.`,
                     name: bucket,
                     dirPath,
@@ -171,7 +171,7 @@ export default function ({ contentPath, contentHost, appHost, buckets }) {
                     title: path.basename(dirPath),
                     description: `All items in ${dirPath
                         .split(path.sep)
-                        .map(_.upperFirst)
+                        .map(_.startCase)
                         .join(' > ')}.`,
                     name: bucket,
                     dirPath,
