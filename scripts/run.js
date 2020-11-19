@@ -31,7 +31,7 @@ async function run() {
     console.log('Git commit feeds...');
     console.log(
         await exec(
-            `cd ${CONTENT_PATH} && git add . && git commit -m - && git push || echo 'No action.'`,
+            `cd ${CONTENT_PATH} && git add . && git commit -m - && git push || echo 'no changes'`,
         ),
     );
 
@@ -82,7 +82,7 @@ async function run() {
     }
 
     console.log('AWS S3 Sync public feeds...');
-    console.log(await exec(`cd ${PUBLIC_CONTENT_PATH} && ./aws-sync.sh`));
+    console.log(await exec(`cd ${PUBLIC_CONTENT_PATH} && ./sync.sh`));
 
     return 'Done';
 }

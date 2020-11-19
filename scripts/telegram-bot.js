@@ -8,6 +8,7 @@ import path from 'path';
 import mkdirp from 'mkdirp';
 import fetch from 'node-fetch';
 import _ from 'lodash';
+import yaml from 'js-yaml';
 import { primaryId, fileNameSnakeCase } from './util/telegram/helpers.js';
 import makeFeeds from './util/telegram/make-feeds.js';
 
@@ -38,7 +39,7 @@ const saveMessage = (group, message) => {
 
     mkdirp.sync(dirPath);
 
-    fs.writeFileSync(path.join(dirPath, `message.json`), JSON.stringify(message, null, 1));
+    fs.writeFileSync(path.join(dirPath, `message.yaml`), yaml.safeDump(message));
 
     [
         message.photo,

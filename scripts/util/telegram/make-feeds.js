@@ -22,6 +22,9 @@ const contentHost = process.env.CONTENT_HOST;
 const mime = Mimer();
 const markdown = new MarkdownIt({ html: true, breaks: true, linkify: true });
 
+// https://urlregex.com/
+const URL_REX = /((([A-Za-z]{3,9}:(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]+|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)/;
+
 const parseTags = (text, entities) => {
     if (text && entities) {
         return entities
@@ -101,14 +104,14 @@ export default (group) => {
     const dirPath = path.join(contentPath, feedPath);
     const items = {};
 
-    glob.sync(path.join('me', 'blog', '_telegram', group, '*', '*', 'message.json'), {
+    glob.sync(path.join('me', 'blog', '_telegram', group, '*', '*', 'message.yaml'), {
         cwd: contentPath,
     })
         .sort()
         .forEach((filePath) => {
             // console.log(filePath);
 
-            const message = JSON.parse(fs.readFileSync(path.join(contentPath, filePath)));
+            const message = yaml.safeLoad(fs.readFileSync(path.join(contentPath, filePath)));
             const id = primaryId(message);
             const tags = [
                 ...parseTags(message.text, message.entities),
@@ -143,6 +146,7 @@ export default (group) => {
                 image: (image && image.url) || null,
                 ...(items[id] || {}),
                 title: _.truncate(text.split('\n')[0] || '', { length: 100 }),
+                url: (text.match(URL_REX) || [])[0],
                 content_text: text,
                 content_html: markdown.render(text),
                 author: {
