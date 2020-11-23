@@ -40,9 +40,10 @@ const parsePhotos = (photos, attachmentsPath, index) => {
         const photo = _.sortBy(photos, 'file_size')[
             index !== undefined ? index : photos.length - 1
         ];
-        const filePath = glob.sync(path.join(attachmentsPath, `${photo.file_unique_id}.*`), {
-            cwd: contentPath,
-        })[0];
+        // const filePath = glob.sync(path.join(attachmentsPath, `${photo.file_unique_id}.*`), {
+        //     cwd: contentPath,
+        // })[0];
+        const filePath = path.join(attachmentsPath, `${photo.file_unique_id}.jpg`);
         if (filePath) {
             return [
                 {
@@ -104,10 +105,12 @@ export default (group) => {
     const dirPath = path.join(contentPath, feedPath);
     const items = {};
 
-    glob.sync(path.join('me', 'blog', '_telegram', group, '*', '*', 'message.yaml'), {
-        cwd: contentPath,
-    })
-        .sort()
+    _.sortBy(
+        glob.sync(path.join('me', 'blog', '_telegram', group, '*', '*', 'message.yaml'), {
+            cwd: contentPath,
+        }),
+        [(i) => parseInt(path.basename(path.dirname(i)))]
+    )
         .forEach((filePath) => {
             // console.log(filePath);
 
@@ -142,9 +145,9 @@ export default (group) => {
             items[id] = omitNull({
                 id,
                 date_published: moment.unix(message.date).format(),
-                date_modified: moment.unix(message.date).format(),
                 image: (image && image.url) || null,
                 ...(items[id] || {}),
+                date_modified: moment.unix(message.date).format(),
                 title: _.truncate(text.split('\n')[0] || '', { length: 100 }),
                 url: (text.match(URL_REX) || [])[0],
                 content_text: text,
@@ -160,6 +163,7 @@ export default (group) => {
                 ]),
                 _archive: {
                     telegram: id,
+                    date_modified: [...(items[id] && items[id]._archive.date_modified || []), moment.unix(message.date).format()],
                 },
             });
         });

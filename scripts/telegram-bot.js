@@ -11,6 +11,7 @@ import _ from 'lodash';
 import yaml from 'js-yaml';
 import { primaryId, fileNameSnakeCase } from './util/telegram/helpers.js';
 import makeFeeds from './util/telegram/make-feeds.js';
+import telegramToFeeds from './telegram-cache-to-feeds.js';
 
 dotenv.config();
 
@@ -105,5 +106,7 @@ bot.on(['message', 'edited_message'], (ctx) => {
         // return ctx.reply('ok');
     }
 });
+
+telegramToFeeds();
 
 bot.launch();
